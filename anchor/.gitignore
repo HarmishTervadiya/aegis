@@ -1,0 +1,16 @@
+# Anchor / Solana build artifacts
+.anchor/
+target/
+test-ledger/
+
+# Dependency directories
+node_modules/
+
+# Tooling and editor noise
+.DS_Store
+**/*.rs.bk
+.yarn/
+.vscode/
+.idea/
+*.swp
+*.swo
