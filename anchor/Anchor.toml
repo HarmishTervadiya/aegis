@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-aegis = "11111111111111111111111111111111"
+aegis = "JDnMTnXL1iAnhvVC2j4C32yzd6NxxH7SszuJw1tAjG7u"
 
 [registry]
 url = "https://api.apr.dev"
