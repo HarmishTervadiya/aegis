@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
-import { createMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { createMint, createAccount, mintTo, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { assert } from "chai";
 // Import the correct generated type (will be generated on your next anchor build)
 import { Aegis } from "../target/types/aegis";
@@ -13,9 +13,14 @@ describe("aegis", () => {
   const program = anchor.workspace.Aegis as Program<Aegis>;
 
   let usdcMint: PublicKey;
-  const owner = provider.wallet as anchor.Wallet;
+  let userTokenAccount: PublicKey;
+  let userVaultPda: PublicKey;
+  let vaultTokenAccountPda: PublicKey;
+  
+  // Note: we must cast to anchor.Wallet to satisfy types, but at runtime it has `.payer`
+  const owner = provider.wallet as anchor.Wallet & { payer: anchor.web3.Keypair };
 
-  it("Initializes the user vault", async () => {
+  before(async () => {
     // 1. Create a dummy USDC mint for local testing purposes
     usdcMint = await createMint(
       provider.connection,
@@ -26,16 +31,18 @@ describe("aegis", () => {
     );
 
     // 2. Derive the PDAs for user vault and the vault's token account
-    const [userVaultPda] = PublicKey.findProgramAddressSync(
+    [userVaultPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), owner.publicKey.toBuffer()],
       program.programId
     );
 
-    const [vaultTokenAccountPda] = PublicKey.findProgramAddressSync(
+    [vaultTokenAccountPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault_token"), owner.publicKey.toBuffer()],
       program.programId
     );
+  });
 
+  it("Initializes the user vault", async () => {
     // 3. Send the transaction to initialize the vault
     const tx = await program.methods
       .initializeVault()
@@ -61,4 +68,56 @@ describe("aegis", () => {
     // Check that currentProtocol is Protocol::Idle
     assert.isOk(vaultAccount.currentProtocol.idle !== undefined);
   });
+
+  it("Deposits USDC into the vault", async () => {
+    // 1. Create a token account for the owner
+    userTokenAccount = await createAccount(
+      provider.connection,
+      owner.payer,
+      usdcMint,
+      owner.publicKey
+    );
+
+    // 2. Mint some dummy USDC to the owner's token account (e.g., 100 USDC)
+    const mintAmount = 100_000_000; // 100 USDC (6 decimals)
+    await mintTo(
+      provider.connection,
+      owner.payer,
+      usdcMint,
+      userTokenAccount,
+      owner.publicKey,
+      mintAmount
+    );
+
+    // 3. Define the deposit amount (e.g., 50 USDC)
+    const depositAmount = new anchor.BN(50_000_000);
+
+    // 4. Call the deposit instruction
+    const tx = await program.methods
+      .deposit(depositAmount)
+      .accounts({
+        userVault: userVaultPda,
+        vaultTokenAccount: vaultTokenAccountPda,
+        userTokenAccount: userTokenAccount,
+        owner: owner.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    console.log("Deposit transaction signature", tx);
+
+    // 5. Verify the Vault's state was updated
+    const vaultAccount = await program.account.userVault.fetch(userVaultPda);
+    assert.equal(vaultAccount.usdcDeposited.toNumber(), depositAmount.toNumber());
+    assert.isOk(vaultAccount.currentProtocol.idle !== undefined);
+
+    // 6. Verify the token transfer actually occurred
+    const vaultTokenAccountData = await getAccount(
+      provider.connection,
+      vaultTokenAccountPda
+    );
+    
+    assert.equal(Number(vaultTokenAccountData.amount), depositAmount.toNumber());
+  });
+
 });

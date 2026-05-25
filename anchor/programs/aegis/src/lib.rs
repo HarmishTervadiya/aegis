@@ -17,4 +17,8 @@ pub mod aegis {
     pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
         instructions::initialize_vault::handler(ctx)
     }
+
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+        instructions::deposit::handler(ctx, amount)
+    }
 }
