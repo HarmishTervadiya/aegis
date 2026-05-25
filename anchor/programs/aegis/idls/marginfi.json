@@ -1,0 +1,393 @@
+{
+  "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "metadata": {
+    "description": "Borrow Lending Prime Broker",
+    "name": "marginfi",
+    "spec": "0.1.0",
+    "version": "0.1.8"
+  },
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "bank_liquidity_vault_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bank"
+              }
+            ]
+          }
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        4,
+        126,
+        116,
+        53,
+        48,
+        5,
+        212,
+        31
+      ],
+      "docs": [
+        "(account authority) Borrow assets from a bank. Accrues interest, records liability, applies",
+        "origination fee, transfers tokens, and runs a health check."
+      ],
+      "name": "lending_account_borrow"
+    },
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "deposit_up_to_limit",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminator": [
+        171,
+        94,
+        235,
+        103,
+        82,
+        64,
+        212,
+        140
+      ],
+      "docs": [
+        "(account authority) Deposit assets into a bank. Accrues interest, records deposit, and",
+        "transfers tokens from the signer's token account to the bank's liquidity vault."
+      ],
+      "name": "lending_account_deposit"
+    },
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "docs": [
+            "Must be marginfi_account's authority, unless in liquidation/deleverage receivership or order execution",
+            "",
+            "Note: during receivership and order execution, there are no signer checks whatsoever: any key can repay as",
+            "long as the invariants checked at the end of execution are met."
+          ],
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "repay_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminator": [
+        79,
+        209,
+        172,
+        177,
+        222,
+        51,
+        173,
+        151
+      ],
+      "docs": [
+        "(account authority, or any signer during receivership) Repay borrowed assets. Accrues",
+        "interest, records repayment, and transfers tokens to the bank's liquidity vault."
+      ],
+      "name": "lending_account_repay"
+    },
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "docs": [
+            "Must be marginfi_account's authority, unless in liquidation/deleverage receivership or order execution",
+            "",
+            "Note: during receivership and order execution, there are no signer checks whatsoever: any key can repay as",
+            "long as the invariants checked at the end of execution are met."
+          ],
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "bank_liquidity_vault_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bank"
+              }
+            ]
+          }
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdraw_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminator": [
+        36,
+        72,
+        74,
+        19,
+        210,
+        210,
+        192,
+        192
+      ],
+      "docs": [
+        "(account authority, or any signer during receivership) Withdraw assets from a bank. Accrues",
+        "interest, records withdrawal, transfers tokens, and runs a health check (skipped during",
+        "receivership)."
+      ],
+      "name": "lending_account_withdraw"
+    },
+    {
+      "accounts": [
+        {
+          "name": "marginfi_group"
+        },
+        {
+          "name": "marginfi_account",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_payer",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        43,
+        78,
+        61,
+        255,
+        148,
+        52,
+        249,
+        154
+      ],
+      "docs": [
+        "Initialize a marginfi account for a given group. The account is a fresh keypair, and must",
+        "sign. If you are a CPI caller, consider using `marginfi_account_initialize_pda` instead, or",
+        "create the account manually and use `transfer_to_new_account` to gift it to the owner you",
+        "wish."
+      ],
+      "name": "marginfi_account_initialize"
+    }
+  ],
+  "accounts": [],
+  "types": [],
+  "errors": [],
+  "events": []
+}

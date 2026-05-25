@@ -1,0 +1,217 @@
+{
+  "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "metadata": {
+    "description": "Borrow Lending Prime Broker",
+    "name": "marginfi",
+    "spec": "0.1.0",
+    "version": "0.1.8"
+  },
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "name": "marginfi_group"
+        },
+        {
+          "name": "marginfi_account",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_payer",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        43,
+        78,
+        61,
+        255,
+        148,
+        52,
+        249,
+        154
+      ],
+      "docs": [
+        "Initialize a marginfi account for a given group."
+      ],
+      "name": "marginfi_account_initialize"
+    },
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "deposit_up_to_limit",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminator": [
+        171,
+        94,
+        235,
+        103,
+        82,
+        64,
+        212,
+        140
+      ],
+      "docs": [
+        "(account authority) Deposit assets into a bank."
+      ],
+      "name": "lending_account_deposit"
+    },
+    {
+      "accounts": [
+        {
+          "name": "group",
+          "relations": [
+            "marginfi_account",
+            "bank"
+          ]
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "bank_liquidity_vault_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bank"
+              }
+            ]
+          }
+        },
+        {
+          "name": "liquidity_vault",
+          "relations": [
+            "bank"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdraw_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminator": [
+        36,
+        72,
+        74,
+        19,
+        210,
+        210,
+        192,
+        192
+      ],
+      "docs": [
+        "(account authority) Withdraw assets from a bank."
+      ],
+      "name": "lending_account_withdraw"
+    }
+  ],
+  "accounts": [],
+  "types": [],
+  "errors": [],
+  "events": []
+}

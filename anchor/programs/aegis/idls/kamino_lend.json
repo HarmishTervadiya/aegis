@@ -1,0 +1,411 @@
+{
+  "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+  "metadata": {
+    "name": "kamino_lending",
+    "version": "1.22.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "refresh_reserve",
+      "discriminator": [
+        2,
+        218,
+        138,
+        235,
+        79,
+        201,
+        25,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "pyth_oracle",
+          "optional": true
+        },
+        {
+          "name": "switchboard_price_oracle",
+          "optional": true
+        },
+        {
+          "name": "switchboard_twap_oracle",
+          "optional": true
+        },
+        {
+          "name": "scope_prices",
+          "optional": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_obligation",
+      "discriminator": [
+        251,
+        10,
+        231,
+        76,
+        27,
+        11,
+        159,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "obligation_owner",
+          "signer": true
+        },
+        {
+          "name": "fee_payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "seed1_account"
+        },
+        {
+          "name": "seed2_account"
+        },
+        {
+          "name": "owner_user_metadata"
+        },
+        {
+          "name": "rent"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitObligationArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "refresh_obligation",
+      "discriminator": [
+        33,
+        132,
+        147,
+        228,
+        151,
+        192,
+        72,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "borrow_obligation_liquidity",
+      "discriminator": [
+        121,
+        127,
+        18,
+        204,
+        73,
+        245,
+        225,
+        65
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "borrow_reserve",
+          "writable": true
+        },
+        {
+          "name": "borrow_reserve_liquidity_mint"
+        },
+        {
+          "name": "reserve_source_liquidity",
+          "writable": true
+        },
+        {
+          "name": "borrow_reserve_liquidity_fee_receiver",
+          "writable": true
+        },
+        {
+          "name": "user_destination_liquidity",
+          "writable": true
+        },
+        {
+          "name": "referrer_token_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "repay_obligation_liquidity",
+      "discriminator": [
+        145,
+        178,
+        13,
+        225,
+        76,
+        240,
+        147,
+        72
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "repay_reserve",
+          "writable": true
+        },
+        {
+          "name": "reserve_liquidity_mint"
+        },
+        {
+          "name": "reserve_destination_liquidity",
+          "writable": true
+        },
+        {
+          "name": "user_source_liquidity",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_reserve_liquidity_and_obligation_collateral",
+      "discriminator": [
+        129,
+        199,
+        4,
+        2,
+        222,
+        39,
+        26,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "reserve_liquidity_mint"
+        },
+        {
+          "name": "reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "reserve_collateral_mint",
+          "writable": true
+        },
+        {
+          "name": "reserve_destination_deposit_collateral",
+          "writable": true
+        },
+        {
+          "name": "user_source_liquidity",
+          "writable": true
+        },
+        {
+          "name": "placeholder_user_destination_collateral",
+          "optional": true
+        },
+        {
+          "name": "collateral_token_program"
+        },
+        {
+          "name": "liquidity_token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_obligation_collateral_and_redeem_reserve_collateral",
+      "discriminator": [
+        75,
+        93,
+        93,
+        220,
+        34,
+        150,
+        218,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "withdraw_reserve",
+          "writable": true
+        },
+        {
+          "name": "reserve_liquidity_mint"
+        },
+        {
+          "name": "reserve_source_collateral",
+          "writable": true
+        },
+        {
+          "name": "reserve_collateral_mint",
+          "writable": true
+        },
+        {
+          "name": "reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "user_destination_liquidity",
+          "writable": true
+        },
+        {
+          "name": "placeholder_user_destination_collateral",
+          "optional": true
+        },
+        {
+          "name": "collateral_token_program"
+        },
+        {
+          "name": "liquidity_token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "collateral_amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [],
+  "types": [
+    {
+      "name": "InitObligationArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tag",
+            "type": "u8"
+          },
+          {
+            "name": "id",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "events": []
+}
