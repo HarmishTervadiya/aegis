@@ -1,163 +1,196 @@
-# APY Arena
+# Aegis
 
-A no-loss prediction market on Solana. Users deposit USDC and bet their unrealized yield (not their principal) on which lending protocol (Kamino or MarginFi) will post a higher APY at the end of a weekly epoch. A constant-product AMM prices YES/NO outcome shares dynamically. Resolution is trustless: the program reads live on-chain reserve state from Kamino and MarginFi directly via account deserialization, no external oracle.
+Aegis is a trustless, cross-protocol automation layer for Solana DeFi. It monitors lending protocol health in real time and automatically moves your capital to safety or to higher yield in a single atomic transaction. No manual intervention. No idle capital. No trusted middleman.
+
+The core guarantee: your funds can never be force-moved by a malicious actor. The off-chain monitoring service only sends a signal. The on-chain Rust program re-reads live protocol state itself and reverts the entire transaction if the condition is not actually met. The safety is mathematical, not operational.
 
 ---
 
-## What makes this technically non-trivial
+## The problem
 
-**Oracle-free resolution via account deserialization.** At epoch end, the `resolve_market` instruction receives Kamino's `Reserve` account and MarginFi's `Bank` account as remaining accounts. The Rust program deserializes both structs, extracts borrow rate and utilization data, computes APY from each protocol's rate curve, and declares the winner entirely on-chain. No Pyth. No Switchboard. No off-chain API call. This requires understanding Solana account memory layout at the struct level.
+Lending protocols like MarginFi and Kamino become dangerous when utilization gets too high. When a pool approaches 95% utilization, withdrawals slow down or freeze entirely. Your capital is locked exactly when you need it most. Protecting yourself today means manually watching dashboards and hoping you react in time.
 
-**Constant-product AMM inside an Anchor program.** A `x * y = k` AMM governs the price of YES (yKAM) and NO (yMAR) outcome shares. As users buy yKAM, its price rises and yMAR becomes cheaper, incentivizing contrarian positions without a market maker. All AMM math, including overflow-safe arithmetic via `checked_mul` and `checked_div`, runs in Rust.
+Existing stop-loss tools on Solana are siloed: they trigger a withdrawal but dump your capital into an idle wallet. Your money stops earning the moment the trigger fires.
 
-**No-loss guarantee enforced at the contract level.** Principal (deposited USDC) and yield are tracked as separate fields in `UserPosition`. The `withdraw_principal` instruction is always available regardless of market state. Only `yield_allocated` enters the prediction market. The separation is enforced in program logic, not just frontend convention.
+---
 
-**Full CPI stack.** The program makes CPIs to the SPL Token program (mint, burn, transfer) and reads external protocol accounts. The yield accrual model mirrors how Kamino's cToken exchange rate grows over time.
+## What Aegis does differently
+
+Aegis does not just withdraw. It reroutes. In a single atomic transaction, it pulls your funds from the at-risk protocol and deposits them into a safer, still-productive alternative. Your capital never sits idle.
+
+Two automation modes:
+
+**Defense Mode** monitors MarginFi USDC utilization. If it crosses 90%, Aegis atomically withdraws your position and deposits it into Kamino before the pool locks.
+
+**Offense Mode** continuously compares yields across protocols. If Kamino's effective yield exceeds MarginFi's by more than 2%, Aegis rebalances automatically to capture the higher return.
+
+---
+
+## How it works for a non-technical reader
+
+You deposit USDC into Aegis and choose a mode. Aegis holds your funds and deploys them into MarginFi on your behalf. A background service watches protocol health around the clock. The moment a trigger condition is true, it sends a transaction to the Aegis smart contract.
+
+Here is the critical part: the smart contract does not trust the background service. It reads the live state of MarginFi and Kamino directly from the blockchain, runs the math itself, and only moves your funds if the condition is genuinely met. If someone tried to send a fake trigger to steal your funds, the contract would see the numbers do not add up and reject the transaction entirely. Your money is protected by math, not by trusting a company.
+
+---
+
+## Why this is technically non-trivial
+
+Most automation tools on Solana rely on Pyth or Switchboard price oracles. Aegis uses no external oracle.
+
+The Rust program receives the live MarginFi `Bank` account and Kamino `Reserve` account as instruction inputs and deserializes their raw memory buffers directly on-chain. It executes the utilization formula natively in fixed-point Rust arithmetic. The blockchain itself evaluates whether the condition is met.
+
+This approach means:
+
+No oracle staleness. The program reads the current slot's state, not a price feed from a previous block.
+
+No trusted data provider. The math runs inside the Solana runtime with zero external dependency.
+
+No manipulation surface. A malicious crank cannot fake protocol state because the program reads it directly from the account owned by the MarginFi and Kamino programs themselves.
+
+The CPI interfaces for interacting with MarginFi and Kamino are generated at compile time using Anchor's `declare_program!` macro from their stripped on-chain IDLs. No external crates. No version conflicts with Anchor 0.32.
 
 ---
 
 ## Architecture
 
-```
-User
- |
- |-- deposit_usdc --------------------------------------------> YieldVault PDA
- |                                                               tracks principal + yield
- |
- |-- swap_yield_for_shares -----------------------------------> AmmPool PDA
- |        |                                                      x * y = k
- |        +-- mints yKAM or yMAR SPL tokens -----------------> UserPosition PDA
- |
- |-- resolve_market ------------------------------------------> reads Kamino Reserve account
- |        |                                                      reads MarginFi Bank account
- |        +-- computes APY from utilization curve               declares winner on-chain
- |
- +-- redeem_winning_shares / withdraw_principal -------------> returns funds to user
-```
+![Aegis Architecture](./docs/architecture.svg)
 
-**On-chain state (PDAs):**
+**On-chain state:**
 
-| Account        | Seeds                         | Purpose                                                      |
-| -------------- | ----------------------------- | ------------------------------------------------------------ |
-| `Market`       | `[b"market", epoch_id]`       | Epoch config, protocol pubkeys, market status, APY snapshots |
-| `AmmPool`      | `[b"amm", market]`            | YES/NO reserve sizes, k invariant, fee config                |
-| `YieldVault`   | `[b"vault", market]`          | Custodies USDC, tracks total deposits and accrued yield      |
-| `UserPosition` | `[b"position", market, user]` | Per-user deposit, yield_allocated, share balances            |
+| Account | Seeds | Purpose |
+|---|---|---|
+| `UserVault` | `[b"vault", user]` | Custodies USDC, tracks which protocol currently holds funds |
+| `TriggerConfig` | `[b"trigger", user]` | Mode, active flag, execution counter |
+| `TriggerLog` | `[b"log", user, count]` | Immutable record of each execution with protocol snapshots |
 
 **Instructions:**
 
-| Instruction             | What it does                                                                            |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `initialize_market`     | Creates all PDAs, seeds AMM at 50/50, sets epoch duration and protocol pubkeys          |
-| `deposit_usdc`          | Transfers USDC to vault, creates UserPosition                                           |
-| `accrue_yield`          | Calculates yield owed based on deposit share and slots elapsed, updates yield_allocated |
-| `swap_yield_for_shares` | Runs AMM math, mints YES or NO SPL tokens to user, updates pool reserves                |
-| `resolve_market`        | Deserializes Kamino Reserve + MarginFi Bank, computes APY, sets winner                  |
-| `redeem_winning_shares` | Burns winning tokens, distributes yield pool proportionally                             |
-| `withdraw_principal`    | Returns deposited USDC, always available                                                |
+| Instruction | Caller | What it does |
+|---|---|---|
+| `initialize_vault` | User | Creates vault PDA and USDC token account |
+| `deposit` | User | Transfers USDC into vault, routes to MarginFi |
+| `set_trigger` | User | Arms Defense or Offense mode |
+| `execute_trigger` | Indexer crank (permissionless) | Validates condition on-chain, atomically reroutes funds |
+| `cancel_trigger` | User | Disarms trigger |
+| `withdraw` | User | Returns USDC to wallet |
+
+---
+
+## On-chain validation in detail
+
+When `execute_trigger` is called, the program:
+
+1. Receives the MarginFi `Bank` account as a remaining account
+2. Verifies its owner is the MarginFi program (`MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA`)
+3. Deserializes `total_asset_shares` and `total_liability_shares` from raw bytes (I80F48 fixed-point at offsets 248 and 264, validated against live state before deployment)
+4. Computes `utilization_bps = (liabilities * 10000) / assets`
+5. Repeats for the Kamino `Reserve` account
+6. Evaluates the trigger condition via `require!` which reverts the transaction if false
+7. If the condition is confirmed, executes CPIs: MarginFi `lending_account_withdraw` followed by Kamino `deposit_reserve_liquidity`
+8. Creates an immutable `TriggerLog` with the utilization snapshot from that exact slot
+
+The permissionless crank design means anyone can run an indexer. Aegis is not dependent on a single operator staying online.
 
 ---
 
 ## Repository structure
 
 ```
-APY-ARENA/
-|-- anchor/                         Anchor program (Rust)
-|   |-- programs/
-|   |   +-- apy-arena/
-|   |       +-- src/
-|   |           |-- lib.rs              instruction entrypoints
-|   |           |-- state/
-|   |           |   |-- market.rs       Market account
-|   |           |   |-- amm_pool.rs     AmmPool account
-|   |           |   |-- vault.rs        YieldVault account
-|   |           |   +-- user_position.rs
-|   |           |-- instructions/
-|   |           |   |-- initialize.rs
-|   |           |   |-- deposit.rs
-|   |           |   |-- accrue_yield.rs
-|   |           |   |-- swap.rs         AMM logic
-|   |           |   |-- resolve.rs      Kamino + MarginFi account reads
-|   |           |   |-- redeem.rs
-|   |           |   +-- withdraw.rs
-|   |           +-- errors.rs
-|   +-- tests/
-|       +-- apy-arena.ts                Anchor integration tests
-|-- client/                             React + Vite + TailwindCSS
-|   +-- src/
-|       |-- pages/
-|       |   |-- Deposit.tsx
-|       |   |-- Market.tsx              AMM price chart + buy shares
-|       |   +-- Portfolio.tsx
-|       |-- hooks/
-|       |   |-- useMarket.ts
-|       |   |-- usePosition.ts
-|       |   +-- useApy.ts
-|       +-- idl/                        generated from anchor build
-+-- server/                             Node.js + Express
-    |-- index.js                        server + cron jobs
-    |-- kamino.js                       polls Kamino Reserve account via RPC
-    +-- marginfi.js                     polls MarginFi Bank account via RPC
+aegis/
+├── anchor/
+│   ├── programs/aegis/
+│   │   ├── idls/
+│   │   │   ├── marginfi_stripped.json
+│   │   │   └── kamino_lend_stripped.json
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── errors.rs
+│   │       ├── state/
+│   │       │   ├── vault.rs
+│   │       │   ├── trigger.rs
+│   │       │   └── log.rs
+│   │       └── instructions/
+│   │           ├── initialize_vault.rs
+│   │           ├── deposit.rs
+│   │           ├── set_trigger.rs
+│   │           ├── execute_trigger.rs
+│   │           ├── cancel_trigger.rs
+│   │           └── withdraw.rs
+│   └── tests/
+├── docs/
+│   └── architecture.svg
+├── frontend/                       React + Vite + TailwindCSS
+└── backend/                        Node.js indexer (The Watcher)
 ```
-
----
-
-## How the oracle-free resolution works
-
-Kamino's `Reserve` account (program: `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD`) contains a `ReserveLiquidity` struct with `available_amount`, `borrowed_amount_wads`, and the borrow rate curve configuration. Utilization = `borrowed / (borrowed + available)`. APY is derived by evaluating the piecewise rate curve at that utilization point.
-
-MarginFi's `Bank` account (program: `MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA`) contains `total_asset_shares`, `total_liability_shares`, and an `InterestRateConfig` with `optimal_utilization_rate`, `plateau_interest_rate`, and `max_interest_rate`. Same computation pattern.
-
-The `resolve_market` instruction takes both accounts as `remaining_accounts`, matches the discriminator to confirm account type, deserializes using the imported crate types, and compares the two computed APYs. No trust assumptions. Anyone can call it.
 
 ---
 
 ## Running locally
 
-**Prerequisites:** Rust, Anchor CLI, Node.js 18+, Solana CLI configured for devnet.
+Prerequisites: Rust, Anchor CLI 0.32.1, Node.js 18+, Solana CLI configured for devnet.
 
 ```bash
-git clone https://github.com/your-handle/apy-arena
-cd apy-arena
+git clone https://github.com/your-handle/aegis
+cd aegis/anchor
 
-# Build and deploy program
-cd anchor
+# Build the program
 anchor build
-anchor deploy --provider.cluster devnet
 
-# Copy IDL to frontend
-cp target/idl/apy_arena.json ../client/src/idl/
+# Start a mainnet-fork local validator
+solana-test-validator \
+  --url mainnet-beta \
+  --clone MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA \
+  --clone 3uxNepDbmkDNq6JhRja5Z8QwbTrfmkKP8AKZV5chYDGG \
+  --clone KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD \
+  --clone d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q \
+  --reset
 
-# Start backend
-cd ../server
-npm install
-cp .env.example .env   # add your RPC URL
-node index.js
+# Validate account reads before deploying
+npx tsx scripts/validate_accounts.ts
+
+# Deploy
+anchor deploy
+
+# Start backend indexer
+cd ../backend && npm install && node index.js
 
 # Start frontend
-cd ../client
-npm install
-npm run dev
+cd ../frontend && npm install && npm run dev
 ```
 
 ---
 
-## Technical decisions worth noting
+## Technical decisions
 
-**Why no Pyth?** Pyth gives you a price feed pushed by off-chain validators. This project's resolution condition is not a price — it is the live operational state of two on-chain programs. Reading that state directly is both more accurate (same block, no staleness) and more decentralized (no oracle network dependency).
+**`declare_program!` over external crates.** `marginfi-cpi` and `kamino-lend` crates target Anchor 0.29 and are incompatible with 0.32 due to borsh and bytemuck version conflicts. `declare_program!` generates typed CPI interfaces directly from the fetched on-chain IDLs at compile time. Zero external protocol dependencies.
 
-**Why constant-product over LMSR?** LMSR (Logarithmic Market Scoring Rule) guarantees bounded loss for the market maker but is significantly harder to implement correctly in Rust with integer arithmetic. Constant-product is simpler, well-understood, and already proven in production (Uniswap v2). For a weekly epoch market with a single binary outcome, the price dynamics are equivalent in practice.
+**Raw byte deserialization for condition reads.** Utilization is computed by reading account bytes at known, pre-validated offsets rather than importing full protocol type crates. This avoids architecture-specific compile constraints (MarginFi's full crate only compiles on x86) and works with any Anchor version. The offsets are verified against live protocol state by the validation script before every deployment.
 
-**Why separate yield_allocated from principal?** This is the core safety property of the no-loss mechanic. Mixing them as a single balance would require careful subtraction logic on withdrawal and create an attack surface where a user could drain principal by manipulating yield accounting. Keeping them as distinct `u64` fields in `UserPosition` makes the invariant trivially verifiable.
+**Fixed-point arithmetic throughout.** All math uses `checked_mul`, `checked_div`, and `checked_add`. Integer overflow produces `AegisError::MathOverflow` rather than a panic. MarginFi's I80F48 values are compared as raw u128 ratios. The 2^48 scale factor cancels in the division, so no lossy float conversion is needed.
 
-**Compressed epochs for testing.** The `epoch_duration` field in `Market` is set by the admin at initialization. Production: 604800 seconds (7 days). Tests and demo: 120 seconds. This is standard practice — the same logic that governs a 7-day epoch governs a 2-minute epoch.
+**Permissionless crank with on-chain re-validation.** The indexer is untrusted by design. Any party can send `execute_trigger`. The program is the sole authority on whether a condition is met.
+
+**Single trigger per user (current scope).** `TriggerConfig` uses seeds `[b"trigger", user]`, giving one trigger per wallet. This keeps the account model simple and the instruction set minimal. Multiple triggers per user would require an additional counter seed and a `TriggerRegistry` account, which is a planned extension.
 
 ---
 
-## What this demonstrates
+## Key addresses
 
-- Anchor program architecture with multiple interacting PDAs
-- CPI to SPL Token program for mint, burn, and transfer
-- External account deserialization (reading another protocol's on-chain state without a CPI call)
-- Constant-product AMM math in Rust with overflow-safe arithmetic
-- Full-stack Solana dApp: on-chain program, React client, Node.js server/indexer backend
+| Account | Address |
+|---|---|
+| MarginFi program | `MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA` |
+| MarginFi USDC Bank | `3uxNepDbmkDNq6JhRja5Z8QwbTrfmkKP8AKZV5chYDGG` |
+| Kamino program | `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD` |
+| Kamino USDC Reserve | `d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q` |
+| USDC mint | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
+
+---
+
+## Deployed program
+
+| Network | Program ID |
+|---|---|
+| Devnet | `YOUR_PROGRAM_ID_AFTER_DEPLOY` |
+
+Frontend: `YOUR_DEPLOYMENT_URL`

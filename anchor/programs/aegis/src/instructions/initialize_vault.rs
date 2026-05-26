@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount, Mint};
 use crate::state::vault::{Protocol, UserVault};
+use anchor_lang::prelude::*;
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct InitializeVault<'info> {
@@ -14,21 +14,22 @@ pub struct InitializeVault<'info> {
     pub user_vault: Account<'info, UserVault>,
 
     #[account(
-        init, 
-        payer=owner,
-        token::mint=usdc_mint,
-        token::authority=user_vault,
-        seeds=[b"vault_token", owner.key().as_ref()],
+        init,
+        payer = owner,
+        token::mint = usdc_mint,
+        token::authority = user_vault,
+        seeds = [b"vault_token", owner.key().as_ref()],
         bump
     )]
-    pub vault_token_account:Account<'info, TokenAccount>,
+    pub vault_token_account: Account<'info, TokenAccount>,
+
     pub usdc_mint: Account<'info, Mint>,
 
     #[account(mut)]
     pub owner: Signer<'info>,
+
     pub system_program: Program<'info, System>,
-    pub token_program:Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<InitializeVault>) -> Result<()> {
