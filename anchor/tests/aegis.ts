@@ -16,6 +16,7 @@ describe("aegis", () => {
   let userTokenAccount: PublicKey;
   let userVaultPda: PublicKey;
   let vaultTokenAccountPda: PublicKey;
+  let triggerConfigPda: PublicKey;
   
   // Note: we must cast to anchor.Wallet to satisfy types, but at runtime it has `.payer`
   const owner = provider.wallet as anchor.Wallet & { payer: anchor.web3.Keypair };
@@ -38,6 +39,11 @@ describe("aegis", () => {
 
     [vaultTokenAccountPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault_token"), owner.publicKey.toBuffer()],
+      program.programId
+    );
+
+    [triggerConfigPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("trigger"), owner.publicKey.toBuffer()],
       program.programId
     );
   });
@@ -118,6 +124,40 @@ describe("aegis", () => {
     );
     
     assert.equal(Number(vaultTokenAccountData.amount), depositAmount.toNumber());
+  });
+
+  it("Sets a trigger", async () => {
+    const tx = await program.methods
+      .setTrigger({ defense: {} })
+      .accounts({
+        triggerConfig: triggerConfigPda,
+        userVault: userVaultPda,
+        owner: owner.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("Set Trigger transaction signature", tx);
+
+    const triggerAccount = await program.account.triggerConfig.fetch(triggerConfigPda);
+    assert.ok(triggerAccount.owner.equals(owner.publicKey));
+    assert.isTrue(triggerAccount.isActive);
+    assert.isOk(triggerAccount.mode.defense !== undefined);
+  });
+
+  it("Cancels a trigger", async () => {
+    const tx = await program.methods
+      .cancelTrigger()
+      .accounts({
+        triggerConfig: triggerConfigPda,
+        owner: owner.publicKey,
+      })
+      .rpc();
+
+    console.log("Cancel Trigger transaction signature", tx);
+
+    const triggerAccount = await program.account.triggerConfig.fetch(triggerConfigPda);
+    assert.isFalse(triggerAccount.isActive);
   });
 
 });
