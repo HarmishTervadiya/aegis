@@ -1,0 +1,26 @@
+{
+  "programIds": {
+    "marginfi": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+    "kamino": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+    "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "sysvarInstructions": "Sysvar1nstructions1111111111111111111111111"
+  },
+  "core": {
+    "marginfiGroup": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
+    "marginfiBank": "2s37akK2eyBbp8DZgCm7RtsaEz8eJP3Nxd4urLHQv7yB",
+    "marginfiBankLiquidityVaultAuthority": "7jaiZR5Sk8hdYN9MxTpczTcwbWpb5WEoxSANuUwveuat",
+    "marginfiBankLiquidityVault": "66bbb81Xo3cwR3J8XNbumHixVHSeLy49Dcb3Pn2kb5Gd",
+    "kaminoLendingMarket": "7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF",
+    "kaminoLendingMarketAuthority": "2UywZrUdyqs5vDchy7fKQJKau2RVyuzBev2XKGPDSiX1",
+    "kaminoReserve": "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q",
+    "kaminoReserveLiquidityMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "kaminoReserveLiquiditySupply": "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59",
+    "kaminoReserveCollateralMint": "Bgq7trRgVMeq33yt235zM2onQ4bRDBsY5EWiTetF4qw6",
+    "kaminoReserveSourceCollateral": "BbDUrk1bVtSixgQsPLBJFZEF7mwGstnD5joA1WzYvYFX",
+    "kaminoReserveDestinationDepositCollateral": "B8V6WVjPxW1UGwVDfxH2d2r8SyT4cqn7dQRK6XneVa7D"
+  },
+  "userState": {
+    "marginfiAccount": "3uxNepDbmkDNq6JhRja5Z8QwbTrfmkKP8AKZV5chYDGG",
+    "kaminoObligation": "8NXMyRD91p3nof61BTkJvrfpGTASHygz1cUvc3HvwyGS"
+  }
+}

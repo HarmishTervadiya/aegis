@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": ["anchor/Cargo.toml"],
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.server.path": "C:/Users/harmi/.rustup/toolchains/1.89.0-x86_64-pc-windows-msvc/bin/rust-analyzer.exe"
+}

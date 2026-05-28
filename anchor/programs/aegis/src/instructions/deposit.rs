@@ -1,5 +1,5 @@
 use crate::errors::AegisError;
-use crate::state::vault::{self, Protocol, UserVault};
+use crate::state::vault::{Protocol, UserVault};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 

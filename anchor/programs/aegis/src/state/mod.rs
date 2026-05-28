@@ -1,2 +1,3 @@
-pub mod vault;
+pub mod log;
 pub mod trigger;
+pub mod vault;

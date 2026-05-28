@@ -2,10 +2,15 @@
   "license": "ISC",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "cpi:fixtures:build": "tsx scripts/build_cpi_fixture_manifest.ts",
+    "cpi:preflight": "tsx scripts/preflight_cpi_accounts.ts",
+    "test:e2e:cpi": "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/e2e.ts\""
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
+    "@kamino-finance/farms-sdk": "^3.2.26",
+    "@kamino-finance/klend-sdk": "^8.0.0",
     "@mrgnlabs/marginfi-client-v2": "^6.4.1",
     "@mrgnlabs/mrgn-common": "^2.0.7",
     "@solana/spl-token": "^0.4.14",

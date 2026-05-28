@@ -1,13 +1,13 @@
 use anchor_lang::prelude::*;
 
 pub mod errors;
-pub mod external;
 pub mod instructions;
 pub mod state;
+
 use crate::state::trigger::TriggerMode;
 use instructions::*;
 
-declare_id!("JDnMTnXL1iAnhvVC2j4C32yzd6NxxH7SszuJw1tAjG7u");
+declare_id!("5f3FSmoxZ6fpiQtdBoaPdAyCwUXmqFSRGBpSpRP9C4iU");
 
 #[program]
 pub mod aegis {
@@ -22,11 +22,24 @@ pub mod aegis {
         instructions::deposit::handler(ctx, amount)
     }
 
-    pub fn set_trigger(ctx: Context<SetTrigger>, mode: TriggerMode) -> Result<()> {
-        instructions::set_trigger::handler(ctx, mode)
+    pub fn set_trigger(
+        ctx: Context<SetTrigger>,
+        mode: TriggerMode,
+        defense_threshold_bps: u64,
+        offense_threshold_bps: u64,
+    ) -> Result<()> {
+        instructions::set_trigger::handler(ctx, mode, defense_threshold_bps, offense_threshold_bps)
     }
 
     pub fn cancel_trigger(ctx: Context<CancelTrigger>) -> Result<()> {
         instructions::cancel_trigger::handler(ctx)
+    }
+
+    pub fn execute_trigger(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
+        instructions::execute_trigger::handler(ctx, log_index)
+    }
+
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, amount)
     }
 }

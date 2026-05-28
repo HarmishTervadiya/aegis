@@ -1,6 +1,7 @@
-use anchor_lang::prelude::*;
+use crate::errors::AegisError;
 use crate::state::trigger::{TriggerConfig, TriggerMode};
 use crate::state::vault::UserVault;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct SetTrigger<'info> {
@@ -26,11 +27,28 @@ pub struct SetTrigger<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<SetTrigger>, mode: TriggerMode) -> Result<()> {
+pub fn handler(
+    ctx: Context<SetTrigger>,
+    mode: TriggerMode,
+    defense_threshold_bps: u64,
+    offense_threshold_bps: u64,
+) -> Result<()> {
+    require!(
+        defense_threshold_bps > 0 && defense_threshold_bps <= 10000,
+        AegisError::InvalidThreshold
+    );
+    require!(
+        offense_threshold_bps > 0 && offense_threshold_bps <= 10000,
+        AegisError::InvalidThreshold
+    );
+
     let trigger = &mut ctx.accounts.trigger_config;
     trigger.owner = ctx.accounts.owner.key();
     trigger.mode = mode;
     trigger.is_active = true;
+    trigger.defense_threshold_bps = defense_threshold_bps;
+    trigger.offense_threshold_bps = offense_threshold_bps;
     trigger.bump = ctx.bumps.trigger_config;
+
     Ok(())
 }

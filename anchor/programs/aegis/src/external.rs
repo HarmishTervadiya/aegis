@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_program!(marginfi);
-declare_program!(kamino_lend);
+// External program declarations for typed CPI (future use)
+// Currently using raw invoke_signed in execute_trigger.rs
+// declare_program!(marginfi);
+// declare_program!(kamino_lend);

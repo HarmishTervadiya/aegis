@@ -11,10 +11,9 @@ pub struct UserVault {
     pub bump: u8,
 }
 
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, InitSpace, Debug)]
 pub enum Protocol {
     Idle,
     Kamino,
-    MarginFi
+    MarginFi,
 }
