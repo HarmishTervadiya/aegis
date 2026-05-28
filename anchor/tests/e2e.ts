@@ -18,7 +18,9 @@ import {
 } from "./cpi_fixtures";
 import { assertRouteShapeLengths } from "./cpi_route_matrix";
 
-function protocolVariant(value: any): "Idle" | "Kamino" | "MarginFi" | "Unknown" {
+function protocolVariant(
+  value: any,
+): "Idle" | "Kamino" | "MarginFi" | "Unknown" {
   if (!value || typeof value !== "object") return "Unknown";
   if ("idle" in value) return "Idle";
   if ("kamino" in value) return "Kamino";
@@ -42,34 +44,50 @@ describe("Aegis E2E Layer 2 (CPI bindings)", () => {
     assertRouteShapeLengths();
     if (!fixtureHasInitializedUserState()) {
       throw new Error(
-        "CPI user-state precondition is missing. Populate scripts/cpi_fixture_manifest.json userState via build_cpi_fixture_manifest.ts before running e2e tests."
+        "CPI user-state precondition is missing. Populate scripts/cpi_fixture_manifest.json userState via build_cpi_fixture_manifest.ts before running e2e tests.",
       );
     }
 
-    const sig = await provider.connection.requestAirdrop(owner.publicKey, 10 * 1e9);
+    const sig = await provider.connection.requestAirdrop(
+      owner.publicKey,
+      10 * 1e9,
+    );
     await provider.connection.confirmTransaction(sig, "confirmed");
 
-    usdcMint = await createMint(provider.connection, owner, owner.publicKey, null, 6);
+    usdcMint = await createMint(
+      provider.connection,
+      owner,
+      owner.publicKey,
+      null,
+      6,
+    );
     const ata = await getOrCreateAssociatedTokenAccount(
       provider.connection,
       owner,
       usdcMint,
-      owner.publicKey
+      owner.publicKey,
     );
     ownerTokenAccount = ata.address;
-    await mintTo(provider.connection, owner, usdcMint, ownerTokenAccount, owner, 1_000_000_000);
+    await mintTo(
+      provider.connection,
+      owner,
+      usdcMint,
+      ownerTokenAccount,
+      owner,
+      1_000_000_000,
+    );
 
     [vaultPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
     [vaultTokenPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault_token"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
     [triggerPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("trigger"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -117,11 +135,19 @@ describe("Aegis E2E Layer 2 (CPI bindings)", () => {
       .rpc();
 
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(), new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
-    const malformed = buildRemainingAccounts("idle_to_kamino", vaultPda, vaultTokenPda);
+    const malformed = buildRemainingAccounts(
+      "idle_to_kamino",
+      vaultPda,
+      vaultTokenPda,
+    );
     const tmp = malformed[0];
     malformed[0] = malformed[1];
     malformed[1] = tmp;
@@ -161,13 +187,21 @@ describe("Aegis E2E Layer 2 (CPI bindings)", () => {
       .rpc();
 
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(), new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
     // In offense mode, destination protocol depends on live utilization values.
     // idle_to_kamino bundle is a strict superset for shared prefix + Kamino deposit path.
-    const remaining = buildRemainingAccounts("idle_to_kamino", vaultPda, vaultTokenPda);
+    const remaining = buildRemainingAccounts(
+      "idle_to_kamino",
+      vaultPda,
+      vaultTokenPda,
+    );
 
     await program.methods
       .executeTrigger(new anchor.BN(0))
@@ -208,8 +242,12 @@ describe("Aegis E2E Layer 2 (CPI bindings)", () => {
       .rpc();
 
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(), new anchor.BN(1).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(1).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
     const vaultBefore = await program.account.userVault.fetch(vaultPda);

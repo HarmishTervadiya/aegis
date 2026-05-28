@@ -23,16 +23,18 @@ function isPlaceholder(value: string): boolean {
 async function expectOwned(
   label: string,
   pubkeyString: string,
-  expectedOwner: PublicKey
+  expectedOwner: PublicKey,
 ): Promise<void> {
   const pubkey = new PublicKey(pubkeyString);
   const info = await connection.getAccountInfo(pubkey);
   if (!info) {
-    throw new Error(`[preflight] Missing account: ${label} (${pubkey.toBase58()})`);
+    throw new Error(
+      `[preflight] Missing account: ${label} (${pubkey.toBase58()})`,
+    );
   }
   if (!info.owner.equals(expectedOwner)) {
     throw new Error(
-      `[preflight] Wrong owner for ${label}. expected=${expectedOwner.toBase58()} actual=${info.owner.toBase58()}`
+      `[preflight] Wrong owner for ${label}. expected=${expectedOwner.toBase58()} actual=${info.owner.toBase58()}`,
     );
   }
 }
@@ -43,23 +45,39 @@ async function main(): Promise<void> {
   const kaminoProgram = new PublicKey(manifest.programIds.kamino);
 
   // Core protocol accounts cloned into local validator.
-  await expectOwned("marginfiBank", manifest.core.marginfiBank, marginfiProgram);
-  await expectOwned("kaminoReserve", manifest.core.kaminoReserve, kaminoProgram);
+  await expectOwned(
+    "marginfiBank",
+    manifest.core.marginfiBank,
+    marginfiProgram,
+  );
+  await expectOwned(
+    "kaminoReserve",
+    manifest.core.kaminoReserve,
+    kaminoProgram,
+  );
 
   // Critical user-state prerequisite for true CPI execution.
   if (isPlaceholder(manifest.userState.marginfiAccount)) {
     throw new Error(
-      "[preflight] userState.marginfiAccount is not configured. Set CPI_MARGINFI_ACCOUNT and rerun build_cpi_fixture_manifest.ts."
+      "[preflight] userState.marginfiAccount is not configured. Set CPI_MARGINFI_ACCOUNT and rerun build_cpi_fixture_manifest.ts.",
     );
   }
   if (isPlaceholder(manifest.userState.kaminoObligation)) {
     throw new Error(
-      "[preflight] userState.kaminoObligation is not configured. Set CPI_KAMINO_OBLIGATION and rerun build_cpi_fixture_manifest.ts."
+      "[preflight] userState.kaminoObligation is not configured. Set CPI_KAMINO_OBLIGATION and rerun build_cpi_fixture_manifest.ts.",
     );
   }
 
-  await expectOwned("marginfiAccount", manifest.userState.marginfiAccount, marginfiProgram);
-  await expectOwned("kaminoObligation", manifest.userState.kaminoObligation, kaminoProgram);
+  await expectOwned(
+    "marginfiAccount",
+    manifest.userState.marginfiAccount,
+    marginfiProgram,
+  );
+  await expectOwned(
+    "kaminoObligation",
+    manifest.userState.kaminoObligation,
+    kaminoProgram,
+  );
 
   console.log("[preflight] CPI fixture accounts are valid.");
 }

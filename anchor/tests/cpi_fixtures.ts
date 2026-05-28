@@ -1,5 +1,9 @@
 import * as fs from "fs";
-import { PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY, AccountMeta } from "@solana/web3.js";
+import {
+  PublicKey,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
+  AccountMeta,
+} from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { RouteName } from "./cpi_route_matrix";
 
@@ -10,7 +14,7 @@ type FixtureManifest = {
 };
 
 const fixtureManifest = JSON.parse(
-  fs.readFileSync("./scripts/cpi_fixture_manifest.json", "utf8")
+  fs.readFileSync("./scripts/cpi_fixture_manifest.json", "utf8"),
 ) as FixtureManifest;
 
 function pk(value: string): PublicKey {
@@ -39,23 +43,37 @@ function m(pubkey: PublicKey, isWritable: boolean): AccountMeta {
 export function buildRemainingAccounts(
   route: RouteName,
   vaultPda: PublicKey,
-  vaultTokenPda: PublicKey
+  vaultTokenPda: PublicKey,
 ): AccountMeta[] {
   const marginfiProgram = pk(fixtureManifest.programIds.marginfi);
   const kaminoProgram = pk(fixtureManifest.programIds.kamino);
   const marginfiGroup = pk(fixtureManifest.core.marginfiGroup);
   const marginfiBank = pk(fixtureManifest.core.marginfiBank);
-  const marginfiVaultAuthority = pk(fixtureManifest.core.marginfiBankLiquidityVaultAuthority);
-  const marginfiLiquidityVault = pk(fixtureManifest.core.marginfiBankLiquidityVault);
+  const marginfiVaultAuthority = pk(
+    fixtureManifest.core.marginfiBankLiquidityVaultAuthority,
+  );
+  const marginfiLiquidityVault = pk(
+    fixtureManifest.core.marginfiBankLiquidityVault,
+  );
   const kaminoMarket = pk(fixtureManifest.core.kaminoLendingMarket);
-  const kaminoMarketAuthority = pk(fixtureManifest.core.kaminoLendingMarketAuthority);
+  const kaminoMarketAuthority = pk(
+    fixtureManifest.core.kaminoLendingMarketAuthority,
+  );
   const kaminoReserve = pk(fixtureManifest.core.kaminoReserve);
-  const kaminoReserveLiquidityMint = pk(fixtureManifest.core.kaminoReserveLiquidityMint);
-  const kaminoReserveLiquiditySupply = pk(fixtureManifest.core.kaminoReserveLiquiditySupply);
-  const kaminoReserveCollateralMint = pk(fixtureManifest.core.kaminoReserveCollateralMint);
-  const kaminoReserveSourceCollateral = pk(fixtureManifest.core.kaminoReserveSourceCollateral);
+  const kaminoReserveLiquidityMint = pk(
+    fixtureManifest.core.kaminoReserveLiquidityMint,
+  );
+  const kaminoReserveLiquiditySupply = pk(
+    fixtureManifest.core.kaminoReserveLiquiditySupply,
+  );
+  const kaminoReserveCollateralMint = pk(
+    fixtureManifest.core.kaminoReserveCollateralMint,
+  );
+  const kaminoReserveSourceCollateral = pk(
+    fixtureManifest.core.kaminoReserveSourceCollateral,
+  );
   const kaminoReserveDestinationDepositCollateral = pk(
-    fixtureManifest.core.kaminoReserveDestinationDepositCollateral
+    fixtureManifest.core.kaminoReserveDestinationDepositCollateral,
   );
 
   const marginfiAccount = pk(fixtureManifest.userState.marginfiAccount);

@@ -35,7 +35,11 @@ const marginfiWithdrawShape: AccountMetaShape[] = [
   { label: "marginfi_group", isWritable: false, isSigner: false },
   { label: "marginfi_account", isWritable: true, isSigner: false },
   { label: "marginfi_bank", isWritable: true, isSigner: false },
-  { label: "marginfi_bank_liquidity_vault_authority", isWritable: false, isSigner: false },
+  {
+    label: "marginfi_bank_liquidity_vault_authority",
+    isWritable: false,
+    isSigner: false,
+  },
   { label: "marginfi_bank_liquidity_vault", isWritable: true, isSigner: false },
   { label: "token_program", isWritable: false, isSigner: false },
 ];
@@ -45,7 +49,11 @@ const marginfiDepositShape: AccountMetaShape[] = [
   { label: "marginfi_group", isWritable: false, isSigner: false },
   { label: "marginfi_account", isWritable: true, isSigner: false },
   { label: "marginfi_bank", isWritable: true, isSigner: false },
-  { label: "vault_token_as_signer_token_account", isWritable: true, isSigner: false },
+  {
+    label: "vault_token_as_signer_token_account",
+    isWritable: true,
+    isSigner: false,
+  },
   { label: "marginfi_bank_liquidity_vault", isWritable: true, isSigner: false },
   { label: "token_program", isWritable: false, isSigner: false },
 ];
@@ -54,13 +62,37 @@ const kaminoWithdrawShape: AccountMetaShape[] = [
   { label: "kamino_program", isWritable: false, isSigner: false },
   { label: "kamino_obligation", isWritable: true, isSigner: false },
   { label: "kamino_lending_market", isWritable: false, isSigner: false },
-  { label: "kamino_lending_market_authority", isWritable: false, isSigner: false },
+  {
+    label: "kamino_lending_market_authority",
+    isWritable: false,
+    isSigner: false,
+  },
   { label: "kamino_withdraw_reserve", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_liquidity_mint", isWritable: false, isSigner: false },
-  { label: "kamino_reserve_source_collateral", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_collateral_mint", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_liquidity_supply", isWritable: true, isSigner: false },
-  { label: "vault_token_as_user_destination_liquidity", isWritable: true, isSigner: false },
+  {
+    label: "kamino_reserve_liquidity_mint",
+    isWritable: false,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_source_collateral",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_collateral_mint",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_liquidity_supply",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "vault_token_as_user_destination_liquidity",
+    isWritable: true,
+    isSigner: false,
+  },
   { label: "collateral_token_program", isWritable: false, isSigner: false },
   { label: "liquidity_token_program", isWritable: false, isSigner: false },
   { label: "instruction_sysvar", isWritable: false, isSigner: false },
@@ -70,13 +102,37 @@ const kaminoDepositShape: AccountMetaShape[] = [
   { label: "kamino_program", isWritable: false, isSigner: false },
   { label: "kamino_obligation", isWritable: true, isSigner: false },
   { label: "kamino_lending_market", isWritable: false, isSigner: false },
-  { label: "kamino_lending_market_authority", isWritable: false, isSigner: false },
+  {
+    label: "kamino_lending_market_authority",
+    isWritable: false,
+    isSigner: false,
+  },
   { label: "kamino_reserve", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_liquidity_mint", isWritable: false, isSigner: false },
-  { label: "kamino_reserve_liquidity_supply", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_collateral_mint", isWritable: true, isSigner: false },
-  { label: "kamino_reserve_destination_deposit_collateral", isWritable: true, isSigner: false },
-  { label: "vault_token_as_user_source_liquidity", isWritable: true, isSigner: false },
+  {
+    label: "kamino_reserve_liquidity_mint",
+    isWritable: false,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_liquidity_supply",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_collateral_mint",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "kamino_reserve_destination_deposit_collateral",
+    isWritable: true,
+    isSigner: false,
+  },
+  {
+    label: "vault_token_as_user_source_liquidity",
+    isWritable: true,
+    isSigner: false,
+  },
   { label: "collateral_token_program", isWritable: false, isSigner: false },
   { label: "liquidity_token_program", isWritable: false, isSigner: false },
   { label: "instruction_sysvar", isWritable: false, isSigner: false },
@@ -137,7 +193,7 @@ export function assertRouteShapeLengths(): void {
   for (const route of ROUTE_SPECS) {
     if (route.shape.length !== route.accountSliceEndExclusive) {
       throw new Error(
-        `Route ${route.name} shape length mismatch: got ${route.shape.length}, expected ${route.accountSliceEndExclusive}`
+        `Route ${route.name} shape length mismatch: got ${route.shape.length}, expected ${route.accountSliceEndExclusive}`,
       );
     }
   }

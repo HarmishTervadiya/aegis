@@ -3,55 +3,67 @@ import { Program } from "@coral-xyz/anchor";
 import { Aegis } from "../target/types/aegis";
 import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
 import {
-  createMint, createAssociatedTokenAccount,
-  mintTo, getAccount, TOKEN_PROGRAM_ID,
+  createMint,
+  createAssociatedTokenAccount,
+  mintTo,
+  getAccount,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import * as fs from "fs";
 import { assert } from "chai";
 
 const mockPubkeys = JSON.parse(
-  fs.readFileSync("./scripts/mock_pubkeys.json", "utf8")
+  fs.readFileSync("./scripts/mock_pubkeys.json", "utf8"),
 );
-const MOCK_MARGINFI_BANK  = new PublicKey(mockPubkeys.MOCK_MARGINFI_BANK);
+const MOCK_MARGINFI_BANK = new PublicKey(mockPubkeys.MOCK_MARGINFI_BANK);
 const MOCK_KAMINO_RESERVE = new PublicKey(mockPubkeys.MOCK_KAMINO_RESERVE);
 
 describe("Aegis", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.Aegis as Program<Aegis>;
-  const owner   = provider.wallet as anchor.Wallet;
+  const owner = provider.wallet as anchor.Wallet;
 
-  let vaultPda:          PublicKey;
-  let vaultTokenPda:     PublicKey;
-  let triggerPda:        PublicKey;
-  let usdcMint:          PublicKey;
+  let vaultPda: PublicKey;
+  let vaultTokenPda: PublicKey;
+  let triggerPda: PublicKey;
+  let usdcMint: PublicKey;
   let ownerTokenAccount: PublicKey;
 
   before(async () => {
     [vaultPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
     [vaultTokenPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault_token"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
     [triggerPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("trigger"), owner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
 
     usdcMint = await createMint(
       provider.connection,
       owner.payer as Keypair,
-      owner.publicKey, null, 6
+      owner.publicKey,
+      null,
+      6,
     );
     ownerTokenAccount = await createAssociatedTokenAccount(
-      provider.connection, owner.payer as Keypair, usdcMint, owner.publicKey
+      provider.connection,
+      owner.payer as Keypair,
+      usdcMint,
+      owner.publicKey,
     );
     await mintTo(
-      provider.connection, owner.payer as Keypair,
-      usdcMint, ownerTokenAccount, owner.publicKey, 10_000_000
+      provider.connection,
+      owner.payer as Keypair,
+      usdcMint,
+      ownerTokenAccount,
+      owner.publicKey,
+      10_000_000,
     );
 
     console.log("Mock MarginFi Bank: ", MOCK_MARGINFI_BANK.toString());
@@ -59,13 +71,17 @@ describe("Aegis", () => {
   });
 
   it("initializes vault", async () => {
-    await program.methods.initializeVault()
+    await program.methods
+      .initializeVault()
       .accounts({
-        userVault: vaultPda, vaultTokenAccount: vaultTokenPda,
-        usdcMint, owner: owner.publicKey,
+        userVault: vaultPda,
+        vaultTokenAccount: vaultTokenPda,
+        usdcMint,
+        owner: owner.publicKey,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-      }).rpc();
+      })
+      .rpc();
 
     const vault = await program.account.userVault.fetch(vaultPda);
     assert.equal(vault.owner.toString(), owner.publicKey.toString());
@@ -74,12 +90,16 @@ describe("Aegis", () => {
   });
 
   it("deposits USDC", async () => {
-    await program.methods.deposit(new anchor.BN(5_000_000))
+    await program.methods
+      .deposit(new anchor.BN(5_000_000))
       .accounts({
-        userVault: vaultPda, vaultTokenAccount: vaultTokenPda,
-        userTokenAccount: ownerTokenAccount, owner: owner.publicKey,
+        userVault: vaultPda,
+        vaultTokenAccount: vaultTokenPda,
+        userTokenAccount: ownerTokenAccount,
+        owner: owner.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
-      }).rpc();
+      })
+      .rpc();
 
     const vault = await program.account.userVault.fetch(vaultPda);
     assert.equal(vault.usdcDeposited.toString(), "5000000");
@@ -90,9 +110,12 @@ describe("Aegis", () => {
     await program.methods
       .setTrigger({ defense: {} }, new anchor.BN(8500), new anchor.BN(200))
       .accounts({
-        triggerConfig: triggerPda, userVault: vaultPda,
-        owner: owner.publicKey, systemProgram: SystemProgram.programId,
-      }).rpc();
+        triggerConfig: triggerPda,
+        userVault: vaultPda,
+        owner: owner.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
 
     const t = await program.account.triggerConfig.fetch(triggerPda);
     assert.equal(t.isActive, true);
@@ -107,7 +130,10 @@ describe("Aegis", () => {
       .rpc();
 
     const vault = await program.account.userVault.fetch(vaultPda);
-    assert.equal(vault.marginfiAccount.toString(), MOCK_MARGINFI_BANK.toString());
+    assert.equal(
+      vault.marginfiAccount.toString(),
+      MOCK_MARGINFI_BANK.toString(),
+    );
     console.log("  PASS: vault pointing at mock accounts");
   });
 
@@ -116,27 +142,38 @@ describe("Aegis", () => {
     await program.methods
       .setTrigger({ defense: {} }, new anchor.BN(9999), new anchor.BN(200))
       .accounts({
-        triggerConfig: triggerPda, userVault: vaultPda,
-        owner: owner.publicKey, systemProgram: SystemProgram.programId,
-      }).rpc();
+        triggerConfig: triggerPda,
+        userVault: vaultPda,
+        owner: owner.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
 
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(),
-       new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
     try {
-      await program.methods.executeTrigger(new anchor.BN(0))
+      await program.methods
+        .executeTrigger(new anchor.BN(0))
         .accounts({
-          triggerConfig: triggerPda, userVault: vaultPda,
-          triggerLog: logPda, owner: owner.publicKey,
-          crank: owner.publicKey, systemProgram: SystemProgram.programId,
+          triggerConfig: triggerPda,
+          userVault: vaultPda,
+          triggerLog: logPda,
+          owner: owner.publicKey,
+          crank: owner.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .remainingAccounts([
-          { pubkey: MOCK_MARGINFI_BANK,  isWritable: false, isSigner: false },
+          { pubkey: MOCK_MARGINFI_BANK, isWritable: false, isSigner: false },
           { pubkey: MOCK_KAMINO_RESERVE, isWritable: false, isSigner: false },
-        ]).rpc();
+        ])
+        .rpc();
       assert.fail("Should have reverted");
     } catch (err: any) {
       assert.include(err.message, "ConditionNotMet");
@@ -149,32 +186,46 @@ describe("Aegis", () => {
     await program.methods
       .setTrigger({ defense: {} }, new anchor.BN(10), new anchor.BN(200))
       .accounts({
-        triggerConfig: triggerPda, userVault: vaultPda,
-        owner: owner.publicKey, systemProgram: SystemProgram.programId,
-      }).rpc();
+        triggerConfig: triggerPda,
+        userVault: vaultPda,
+        owner: owner.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
 
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(),
-       new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
     try {
-      await program.methods.executeTrigger(new anchor.BN(0))
+      await program.methods
+        .executeTrigger(new anchor.BN(0))
         .accounts({
-          triggerConfig: triggerPda, userVault: vaultPda,
-          triggerLog: logPda, owner: owner.publicKey,
-          crank: owner.publicKey, systemProgram: SystemProgram.programId,
+          triggerConfig: triggerPda,
+          userVault: vaultPda,
+          triggerLog: logPda,
+          owner: owner.publicKey,
+          crank: owner.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .remainingAccounts([
-          { pubkey: MOCK_MARGINFI_BANK,  isWritable: false, isSigner: false },
+          { pubkey: MOCK_MARGINFI_BANK, isWritable: false, isSigner: false },
           { pubkey: MOCK_KAMINO_RESERVE, isWritable: false, isSigner: false },
-        ]).rpc();
+        ])
+        .rpc();
 
       // If CPIs are stubbed, full flow passed — check the log
       const log = await program.account.triggerLog.fetch(logPda);
-      console.log("  PASS: Full flow. marginfi_util:", log.marginfiUtilizationBps.toNumber(), "bps");
-
+      console.log(
+        "  PASS: Full flow. marginfi_util:",
+        log.marginfiUtilizationBps.toNumber(),
+        "bps",
+      );
     } catch (err: any) {
       // FundsNotInExpectedProtocol is acceptable here —
       // it means condition check PASSED (byte reads worked)
@@ -182,8 +233,12 @@ describe("Aegis", () => {
       // This is expected until full CPI routing is wired
       if (err.message.includes("NoDeployedFunds")) {
         console.log("  PASS: Condition check passed (byte reads correct)");
-        console.log("        Routing failed at NoDeployedFunds — expected (funds are Idle)");
-        console.log("        This confirms: owner check, deserialization, utilization math all work");
+        console.log(
+          "        Routing failed at NoDeployedFunds — expected (funds are Idle)",
+        );
+        console.log(
+          "        This confirms: owner check, deserialization, utilization math all work",
+        );
         return;
       }
       throw err;
@@ -193,32 +248,45 @@ describe("Aegis", () => {
   it("execute_trigger REVERTS with InvalidAccountOwner for fake accounts", async () => {
     const fakeAccount = Keypair.generate().publicKey;
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(),
-       new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
 
     try {
-      await program.methods.executeTrigger(new anchor.BN(0))
+      await program.methods
+        .executeTrigger(new anchor.BN(0))
         .accounts({
-          triggerConfig: triggerPda, userVault: vaultPda,
-          triggerLog: logPda, owner: owner.publicKey,
-          crank: owner.publicKey, systemProgram: SystemProgram.programId,
+          triggerConfig: triggerPda,
+          userVault: vaultPda,
+          triggerLog: logPda,
+          owner: owner.publicKey,
+          crank: owner.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .remainingAccounts([
-          { pubkey: fakeAccount,         isWritable: false, isSigner: false },
+          { pubkey: fakeAccount, isWritable: false, isSigner: false },
           { pubkey: MOCK_KAMINO_RESERVE, isWritable: false, isSigner: false },
-        ]).rpc();
+        ])
+        .rpc();
       assert.fail("Should have reverted with InvalidAccountOwner");
     } catch (err: any) {
       assert.include(err.message, "InvalidAccountOwner");
-      console.log("  PASS: InvalidAccountOwner — fake account correctly rejected");
-      console.log("        Trustless guarantee verified: malicious crank cannot fake state");
+      console.log(
+        "  PASS: InvalidAccountOwner — fake account correctly rejected",
+      );
+      console.log(
+        "        Trustless guarantee verified: malicious crank cannot fake state",
+      );
     }
   });
 
   it("cancel_trigger sets is_active to false", async () => {
-    await program.methods.cancelTrigger()
+    await program.methods
+      .cancelTrigger()
       .accounts({ triggerConfig: triggerPda, owner: owner.publicKey })
       .rpc();
     const t = await program.account.triggerConfig.fetch(triggerPda);
@@ -227,37 +295,52 @@ describe("Aegis", () => {
   });
 
   it("withdraw returns USDC to owner", async () => {
-    const before = (await getAccount(provider.connection, ownerTokenAccount)).amount;
+    const before = (await getAccount(provider.connection, ownerTokenAccount))
+      .amount;
 
-    await program.methods.withdraw(new anchor.BN(5_000_000))
+    await program.methods
+      .withdraw(new anchor.BN(5_000_000))
       .accounts({
-        userVault: vaultPda, triggerConfig: triggerPda,
-        vaultTokenAccount: vaultTokenPda, userTokenAccount: ownerTokenAccount,
-        owner: owner.publicKey, tokenProgram: TOKEN_PROGRAM_ID,
-      }).rpc();
+        userVault: vaultPda,
+        triggerConfig: triggerPda,
+        vaultTokenAccount: vaultTokenPda,
+        userTokenAccount: ownerTokenAccount,
+        owner: owner.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
 
-    const after = (await getAccount(provider.connection, ownerTokenAccount)).amount;
+    const after = (await getAccount(provider.connection, ownerTokenAccount))
+      .amount;
     assert.equal((after - before).toString(), "5000000");
     console.log("  PASS: 5 USDC returned to owner");
   });
 
   it("execute_trigger REVERTS with TriggerNotActive after cancel", async () => {
     const [logPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("log"), owner.publicKey.toBuffer(),
-       new anchor.BN(0).toArrayLike(Buffer, "le", 8)],
-      program.programId
+      [
+        Buffer.from("log"),
+        owner.publicKey.toBuffer(),
+        new anchor.BN(0).toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
     );
     try {
-      await program.methods.executeTrigger(new anchor.BN(0))
+      await program.methods
+        .executeTrigger(new anchor.BN(0))
         .accounts({
-          triggerConfig: triggerPda, userVault: vaultPda,
-          triggerLog: logPda, owner: owner.publicKey,
-          crank: owner.publicKey, systemProgram: SystemProgram.programId,
+          triggerConfig: triggerPda,
+          userVault: vaultPda,
+          triggerLog: logPda,
+          owner: owner.publicKey,
+          crank: owner.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .remainingAccounts([
-          { pubkey: MOCK_MARGINFI_BANK,  isWritable: false, isSigner: false },
+          { pubkey: MOCK_MARGINFI_BANK, isWritable: false, isSigner: false },
           { pubkey: MOCK_KAMINO_RESERVE, isWritable: false, isSigner: false },
-        ]).rpc();
+        ])
+        .rpc();
       assert.fail("Should have reverted");
     } catch (err: any) {
       assert.include(err.message, "TriggerNotActive");
