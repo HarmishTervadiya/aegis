@@ -1,9 +1,9 @@
-import { Link, useLocation }       from "react-router-dom";
-import { WalletMultiButton }       from "@solana/wallet-adapter-react-ui";
+import { Link, useLocation } from "react-router-dom";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 const links = [
-  { to: "/",          label: "Dashboard" },
-  { to: "/deposit",   label: "Deposit"   },
+  { to: "/", label: "Dashboard" },
+  { to: "/deposit", label: "Deposit" },
   { to: "/portfolio", label: "Portfolio" },
 ];
 
@@ -24,9 +24,11 @@ export default function Navbar() {
                 to={to}
                 className={`
                   px-3 py-1.5 rounded-md text-sm transition-colors
-                  ${pathname === to
-                    ? "text-primary bg-bg"
-                    : "text-secondary hover:text-primary"}
+                  ${
+                    pathname === to
+                      ? "text-primary bg-bg"
+                      : "text-secondary hover:text-primary"
+                  }
                 `}
               >
                 {label}

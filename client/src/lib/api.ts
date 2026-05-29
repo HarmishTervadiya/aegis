@@ -21,7 +21,7 @@ api.interceptors.response.use(
       localStorage.removeItem("aegis_token");
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 export default api;

@@ -13,6 +13,7 @@ import { Toaster } from "react-hot-toast";
 import App from "./App";
 import "./styles/index.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import { BrowserRouter } from "react-router-dom";
 
 const wallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
 const RPC_URL = import.meta.env.VITE_RPC_URL || "http://127.0.0.1:8899";
@@ -22,18 +23,19 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ConnectionProvider endpoint={RPC_URL}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          {/* using BrowserRouter for routing */}
-          <App />
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: "#111118",
-                color: "#e8e8f0",
-                border: "1px solid #1e1e2a",
-              },
-            }}
-          />
+          <BrowserRouter>
+            <App />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: "#111118",
+                  color: "#e8e8f0",
+                  border: "1px solid #1e1e2a",
+                },
+              }}
+            />
+          </BrowserRouter>
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
