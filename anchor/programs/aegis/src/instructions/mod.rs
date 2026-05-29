@@ -5,6 +5,7 @@ pub mod deposit;
 pub mod execute_trigger;
 pub mod initialize_vault;
 pub mod set_trigger;
+pub mod update_mock;
 pub mod withdraw;
 
 pub use cancel_trigger::*;
@@ -12,4 +13,5 @@ pub use deposit::*;
 pub use execute_trigger::*;
 pub use initialize_vault::*;
 pub use set_trigger::*;
+pub use update_mock::*;
 pub use withdraw::*;

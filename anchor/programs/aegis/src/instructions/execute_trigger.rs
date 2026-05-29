@@ -142,14 +142,17 @@ pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
     );
 
     // Read on-chain utilization from both protocols via cloned account data
-    require!(
-        ctx.remaining_accounts[0].owner == &Pubkey::from_str("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA").unwrap(),
-        AegisError::InvalidAccountOwner
-    );
-    require!(
-        ctx.remaining_accounts[1].owner == &Pubkey::from_str("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD").unwrap(),
-        AegisError::InvalidAccountOwner
-    );
+    #[cfg(not(feature = "mock-cpi"))]
+    {
+        require!(
+            ctx.remaining_accounts[0].owner == &Pubkey::from_str("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA").unwrap(),
+            AegisError::InvalidAccountOwner
+        );
+        require!(
+            ctx.remaining_accounts[1].owner == &Pubkey::from_str("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD").unwrap(),
+            AegisError::InvalidAccountOwner
+        );
+    }
 
     let marginfi_util_bps = read_marginfi_utilization(&ctx.remaining_accounts[0])?;
     let kamino_util_bps = read_kamino_utilization(&ctx.remaining_accounts[1])?;
@@ -352,6 +355,18 @@ pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
 ///   [5] bank_liquidity_vault_authority
 ///   [6] liquidity_vault (writable)
 ///   [7] token_program
+#[cfg(feature = "mock-cpi")]
+fn marginfi_withdraw<'info>(
+    _accounts: &[AccountInfo<'info>],
+    _vault_pda: &AccountInfo<'info>,
+    _vault_token_account: &AccountInfo<'info>,
+    _amount: u64,
+    _signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn marginfi_withdraw<'info>(
     accounts: &[AccountInfo<'info>],
     vault_pda: &AccountInfo<'info>,
@@ -409,6 +424,18 @@ fn marginfi_withdraw<'info>(
 ///   [4] signer_token_account (vault token account, writable)
 ///   [5] liquidity_vault (writable)
 ///   [6] token_program
+#[cfg(feature = "mock-cpi")]
+fn marginfi_deposit<'info>(
+    _accounts: &[AccountInfo<'info>],
+    _vault_pda: &AccountInfo<'info>,
+    _vault_token_account: &AccountInfo<'info>,
+    _amount: u64,
+    _signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn marginfi_deposit<'info>(
     accounts: &[AccountInfo<'info>],
     vault_pda: &AccountInfo<'info>,
@@ -473,6 +500,18 @@ fn marginfi_deposit<'info>(
 ///   [10] collateral_token_program
 ///   [11] liquidity_token_program
 ///   [12] instruction_sysvar_account
+#[cfg(feature = "mock-cpi")]
+fn kamino_deposit<'info>(
+    _accounts: &[AccountInfo<'info>],
+    _vault_pda: &AccountInfo<'info>,
+    _vault_token_account: &AccountInfo<'info>,
+    _amount: u64,
+    _signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn kamino_deposit<'info>(
     accounts: &[AccountInfo<'info>],
     vault_pda: &AccountInfo<'info>,
@@ -543,6 +582,18 @@ fn kamino_deposit<'info>(
 ///   [10] collateral_token_program
 ///   [11] liquidity_token_program
 ///   [12] instruction_sysvar_account
+#[cfg(feature = "mock-cpi")]
+fn kamino_withdraw<'info>(
+    _accounts: &[AccountInfo<'info>],
+    _vault_pda: &AccountInfo<'info>,
+    _vault_token_account: &AccountInfo<'info>,
+    _amount: u64,
+    _signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn kamino_withdraw<'info>(
     accounts: &[AccountInfo<'info>],
     vault_pda: &AccountInfo<'info>,

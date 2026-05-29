@@ -1,4 +1,5 @@
-import { useState, ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -36,7 +37,13 @@ export default function TxButton({
         );
       }
     } catch (err: any) {
-      toast.error(err?.message || "Transaction failed");
+      console.error(err);
+      let msg = err?.message || "Transaction failed";
+      if (msg.includes("custom program error: 0x")) {
+        const code = msg.match(/custom program error: (0x[0-9a-fA-F]+)/)?.[1];
+        msg = `Contract Error ${code}. Check program logs.`;
+      }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

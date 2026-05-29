@@ -15,12 +15,23 @@ api.interceptors.request.use((config) => {
 
 // On 401, clear the token and let the user re-authenticate
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Unwrap the { success, data, errors } format
+    if (res.data && typeof res.data.success === "boolean") {
+      if (res.data.success) {
+        return { ...res, data: res.data.data };
+      } else {
+        return Promise.reject(new Error(res.data.errors || "API Error"));
+      }
+    }
+    return res;
+  },
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("aegis_token");
     }
-    return Promise.reject(err);
+    const msg = err.response?.data?.errors || err.message;
+    return Promise.reject(new Error(msg));
   },
 );
 

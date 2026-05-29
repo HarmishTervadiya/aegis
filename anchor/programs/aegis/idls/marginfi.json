@@ -11,10 +11,7 @@
       "accounts": [
         {
           "name": "group",
-          "relations": [
-            "marginfi_account",
-            "bank"
-          ]
+          "relations": ["marginfi_account", "bank"]
         },
         {
           "name": "marginfi_account",
@@ -39,26 +36,8 @@
               {
                 "kind": "const",
                 "value": [
-                  108,
-                  105,
-                  113,
-                  117,
-                  105,
-                  100,
-                  105,
-                  116,
-                  121,
-                  95,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116,
-                  95,
-                  97,
-                  117,
-                  116,
-                  104
+                  108, 105, 113, 117, 105, 100, 105, 116, 121, 95, 118, 97, 117,
+                  108, 116, 95, 97, 117, 116, 104
                 ]
               },
               {
@@ -70,9 +49,7 @@
         },
         {
           "name": "liquidity_vault",
-          "relations": [
-            "bank"
-          ],
+          "relations": ["bank"],
           "writable": true
         },
         {
@@ -85,16 +62,7 @@
           "type": "u64"
         }
       ],
-      "discriminator": [
-        4,
-        126,
-        116,
-        53,
-        48,
-        5,
-        212,
-        31
-      ],
+      "discriminator": [4, 126, 116, 53, 48, 5, 212, 31],
       "docs": [
         "(account authority) Borrow assets from a bank. Accrues interest, records liability, applies",
         "origination fee, transfers tokens, and runs a health check."
@@ -105,10 +73,7 @@
       "accounts": [
         {
           "name": "group",
-          "relations": [
-            "marginfi_account",
-            "bank"
-          ]
+          "relations": ["marginfi_account", "bank"]
         },
         {
           "name": "marginfi_account",
@@ -128,9 +93,7 @@
         },
         {
           "name": "liquidity_vault",
-          "relations": [
-            "bank"
-          ],
+          "relations": ["bank"],
           "writable": true
         },
         {
@@ -149,16 +112,7 @@
           }
         }
       ],
-      "discriminator": [
-        171,
-        94,
-        235,
-        103,
-        82,
-        64,
-        212,
-        140
-      ],
+      "discriminator": [171, 94, 235, 103, 82, 64, 212, 140],
       "docs": [
         "(account authority) Deposit assets into a bank. Accrues interest, records deposit, and",
         "transfers tokens from the signer's token account to the bank's liquidity vault."
@@ -169,10 +123,7 @@
       "accounts": [
         {
           "name": "group",
-          "relations": [
-            "marginfi_account",
-            "bank"
-          ]
+          "relations": ["marginfi_account", "bank"]
         },
         {
           "name": "marginfi_account",
@@ -198,9 +149,7 @@
         },
         {
           "name": "liquidity_vault",
-          "relations": [
-            "bank"
-          ],
+          "relations": ["bank"],
           "writable": true
         },
         {
@@ -219,16 +168,7 @@
           }
         }
       ],
-      "discriminator": [
-        79,
-        209,
-        172,
-        177,
-        222,
-        51,
-        173,
-        151
-      ],
+      "discriminator": [79, 209, 172, 177, 222, 51, 173, 151],
       "docs": [
         "(account authority, or any signer during receivership) Repay borrowed assets. Accrues",
         "interest, records repayment, and transfers tokens to the bank's liquidity vault."
@@ -239,10 +179,7 @@
       "accounts": [
         {
           "name": "group",
-          "relations": [
-            "marginfi_account",
-            "bank"
-          ]
+          "relations": ["marginfi_account", "bank"]
         },
         {
           "name": "marginfi_account",
@@ -273,26 +210,8 @@
               {
                 "kind": "const",
                 "value": [
-                  108,
-                  105,
-                  113,
-                  117,
-                  105,
-                  100,
-                  105,
-                  116,
-                  121,
-                  95,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116,
-                  95,
-                  97,
-                  117,
-                  116,
-                  104
+                  108, 105, 113, 117, 105, 100, 105, 116, 121, 95, 118, 97, 117,
+                  108, 116, 95, 97, 117, 116, 104
                 ]
               },
               {
@@ -304,9 +223,7 @@
         },
         {
           "name": "liquidity_vault",
-          "relations": [
-            "bank"
-          ],
+          "relations": ["bank"],
           "writable": true
         },
         {
@@ -325,16 +242,7 @@
           }
         }
       ],
-      "discriminator": [
-        36,
-        72,
-        74,
-        19,
-        210,
-        210,
-        192,
-        192
-      ],
+      "discriminator": [36, 72, 74, 19, 210, 210, 192, 192],
       "docs": [
         "(account authority, or any signer during receivership) Withdraw assets from a bank. Accrues",
         "interest, records withdrawal, transfers tokens, and runs a health check (skipped during",
@@ -367,16 +275,7 @@
         }
       ],
       "args": [],
-      "discriminator": [
-        43,
-        78,
-        61,
-        255,
-        148,
-        52,
-        249,
-        154
-      ],
+      "discriminator": [43, 78, 61, 255, 148, 52, 249, 154],
       "docs": [
         "Initialize a marginfi account for a given group. The account is a fresh keypair, and must",
         "sign. If you are a CPI caller, consider using `marginfi_account_initialize_pda` instead, or",

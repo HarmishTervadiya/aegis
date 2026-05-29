@@ -12,7 +12,9 @@ import {
 } from "../utils/constants.js";
 import { withRetry } from "../utils/retry.js";
 
-const POLL_INTERVAL_SECONDS = parseInt(process.env.POLL_INTERVAL_SECONDS || "15");
+const POLL_INTERVAL_SECONDS = parseInt(
+  process.env.POLL_INTERVAL_SECONDS || "15",
+);
 
 function read128LE(buffer: Buffer, offset: number): bigint {
   const lower = buffer.readBigUInt64LE(offset);
@@ -48,7 +50,10 @@ function readKaminoUtilization(data: Buffer): number {
 export async function pollProtocolState() {
   try {
     const accounts = await withRetry(() =>
-      connection.getMultipleAccountsInfo([MARGINFI_BANK, KAMINO_RESERVE], "confirmed")
+      connection.getMultipleAccountsInfo(
+        [MARGINFI_BANK, KAMINO_RESERVE],
+        "confirmed",
+      ),
     );
 
     const [mfi, kam] = accounts;
@@ -79,7 +84,9 @@ export async function pollProtocolState() {
 
 export async function fetchActiveTriggers() {
   try {
-    const allTriggers = await withRetry<any[]>(() => (program.account as any).triggerConfig.all());
+    const allTriggers = await withRetry<any[]>(() =>
+      (program.account as any).triggerConfig.all(),
+    );
     const newCache = new Map<string, CachedTrigger>();
 
     for (const t of allTriggers) {
@@ -104,13 +111,19 @@ export async function fetchActiveTriggers() {
   }
 }
 
-function isCacheStale(updatedAt: string | null, maxAgeMs = POLL_INTERVAL_SECONDS * 2 * 1000) {
+function isCacheStale(
+  updatedAt: string | null,
+  maxAgeMs = POLL_INTERVAL_SECONDS * 2 * 1000,
+) {
   if (!updatedAt) return true;
   return Date.now() - new Date(updatedAt).getTime() > maxAgeMs;
 }
 
 export function evaluateTriggers(): CachedTrigger[] {
-  if (isCacheStale(cache.marginfi.updatedAt) || isCacheStale(cache.kamino.updatedAt)) {
+  if (
+    isCacheStale(cache.marginfi.updatedAt) ||
+    isCacheStale(cache.kamino.updatedAt)
+  ) {
     console.warn("Watcher: cache is stale — skipping trigger evaluation");
     return [];
   }
@@ -126,12 +139,18 @@ export function evaluateTriggers(): CachedTrigger[] {
 
     if (trigger.mode.defense) {
       // In Defense, user wants to move out of a protocol if its util is too HIGH (> defenseThreshold)
-      if (mfiUtil > trigger.defenseThresholdBps || kamUtil > trigger.defenseThresholdBps) {
+      if (
+        mfiUtil > trigger.defenseThresholdBps ||
+        kamUtil > trigger.defenseThresholdBps
+      ) {
         shouldFire = true;
       }
     } else if (trigger.mode.offense) {
       // In Offense, user wants to move into a protocol if its util is LOW (< offenseThreshold)
-      if (mfiUtil < trigger.offenseThresholdBps || kamUtil < trigger.offenseThresholdBps) {
+      if (
+        mfiUtil < trigger.offenseThresholdBps ||
+        kamUtil < trigger.offenseThresholdBps
+      ) {
         shouldFire = true;
       }
     }

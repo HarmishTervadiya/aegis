@@ -19,7 +19,7 @@ export function useUserVault() {
       setLoading(true);
       try {
         const pda = deriveVaultPda(publicKey);
-        const data = await program.account.userVault.fetch(pda);
+        const data = await (program.account as any).userVault.fetch(pda);
         setVault({ ...data, pda });
       } catch {
         setVault(null); // vault does not exist yet

@@ -42,4 +42,14 @@ pub mod aegis {
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, amount)
     }
+
+    pub fn update_mock(
+        ctx: Context<UpdateMock>,
+        mfi_assets: u128,
+        mfi_liab: u128,
+        kam_avail: u64,
+        kam_borrow: u128,
+    ) -> Result<()> {
+        instructions::update_mock::handler(ctx, mfi_assets, mfi_liab, kam_avail, kam_borrow)
+    }
 }

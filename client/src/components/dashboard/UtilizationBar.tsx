@@ -7,11 +7,10 @@ interface Props {
 export default function UtilizationBar({
   utilizationPct,
   thresholdPct,
-  protocol,
+  protocol: _protocol,
 }: Props) {
   const pct = Math.min(utilizationPct, 100);
   const color = pct >= 90 ? "bg-red" : pct >= 70 ? "bg-amber" : "bg-green";
-  const accent = protocol === "marginfi" ? "bg-marginfi" : "bg-kamino";
 
   return (
     <div className="relative w-full h-2 bg-muted rounded-full overflow-visible mt-2">

@@ -30,7 +30,10 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
 
   inFlight.add(key);
   try {
-    const vaultPda = deriveVaultPda(new PublicKey(trigger.owner), program.programId);
+    const vaultPda = deriveVaultPda(
+      new PublicKey(trigger.owner),
+      program.programId,
+    );
 
     // Build the transaction
     // Note: If executeTrigger requires specific protocol accounts like MarginFi and Kamino,
@@ -65,7 +68,9 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
   } catch (err: any) {
     const explanation = classifyError(err);
     if (explanation) {
-      console.log(`Executor: expected failure for ${key.slice(0, 8)} — ${explanation}`);
+      console.log(
+        `Executor: expected failure for ${key.slice(0, 8)} — ${explanation}`,
+      );
     } else {
       console.error(`Executor: execution failed for ${key.slice(0, 8)}`, err);
     }

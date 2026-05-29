@@ -58,22 +58,22 @@ The CPI interfaces for interacting with MarginFi and Kamino are generated at com
 
 **On-chain state:**
 
-| Account | Seeds | Purpose |
-|---|---|---|
-| `UserVault` | `[b"vault", user]` | Custodies USDC, tracks which protocol currently holds funds |
-| `TriggerConfig` | `[b"trigger", user]` | Mode, active flag, execution counter |
-| `TriggerLog` | `[b"log", user, count]` | Immutable record of each execution with protocol snapshots |
+| Account         | Seeds                   | Purpose                                                     |
+| --------------- | ----------------------- | ----------------------------------------------------------- |
+| `UserVault`     | `[b"vault", user]`      | Custodies USDC, tracks which protocol currently holds funds |
+| `TriggerConfig` | `[b"trigger", user]`    | Mode, active flag, execution counter                        |
+| `TriggerLog`    | `[b"log", user, count]` | Immutable record of each execution with protocol snapshots  |
 
 **Instructions:**
 
-| Instruction | Caller | What it does |
-|---|---|---|
-| `initialize_vault` | User | Creates vault PDA and USDC token account |
-| `deposit` | User | Transfers USDC into vault, routes to MarginFi |
-| `set_trigger` | User | Arms Defense or Offense mode |
-| `execute_trigger` | Indexer crank (permissionless) | Validates condition on-chain, atomically reroutes funds |
-| `cancel_trigger` | User | Disarms trigger |
-| `withdraw` | User | Returns USDC to wallet |
+| Instruction        | Caller                         | What it does                                            |
+| ------------------ | ------------------------------ | ------------------------------------------------------- |
+| `initialize_vault` | User                           | Creates vault PDA and USDC token account                |
+| `deposit`          | User                           | Transfers USDC into vault, routes to MarginFi           |
+| `set_trigger`      | User                           | Arms Defense or Offense mode                            |
+| `execute_trigger`  | Indexer crank (permissionless) | Validates condition on-chain, atomically reroutes funds |
+| `cancel_trigger`   | User                           | Disarms trigger                                         |
+| `withdraw`         | User                           | Returns USDC to wallet                                  |
 
 ---
 
@@ -177,20 +177,20 @@ cd ../frontend && npm install && npm run dev
 
 ## Key addresses
 
-| Account | Address |
-|---|---|
-| MarginFi program | `MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA` |
-| MarginFi USDC Bank | `3uxNepDbmkDNq6JhRja5Z8QwbTrfmkKP8AKZV5chYDGG` |
-| Kamino program | `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD` |
-| Kamino USDC Reserve | `d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q` |
-| USDC mint | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
+| Account             | Address                                        |
+| ------------------- | ---------------------------------------------- |
+| MarginFi program    | `MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA`  |
+| MarginFi USDC Bank  | `3uxNepDbmkDNq6JhRja5Z8QwbTrfmkKP8AKZV5chYDGG` |
+| Kamino program      | `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD`  |
+| Kamino USDC Reserve | `d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q`  |
+| USDC mint           | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
 
 ---
 
 ## Deployed program
 
-| Network | Program ID |
-|---|---|
-| Devnet | `YOUR_PROGRAM_ID_AFTER_DEPLOY` |
+| Network | Program ID                     |
+| ------- | ------------------------------ |
+| Devnet  | `YOUR_PROGRAM_ID_AFTER_DEPLOY` |
 
 Frontend: `YOUR_DEPLOYMENT_URL`

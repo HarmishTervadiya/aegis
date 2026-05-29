@@ -1,9 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
-// Temporary dummy pages
-const Deposit = () => <div className="p-10">Deposit Page</div>;
-const Portfolio = () => <div className="p-10">Portfolio Page</div>;
+import Deposit from "./pages/Deposit";
+import Portfolio from "./pages/Portfolio";
 
 export default function App() {
   return (

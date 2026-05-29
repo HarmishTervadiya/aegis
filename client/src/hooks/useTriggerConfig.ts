@@ -19,7 +19,7 @@ export function useTriggerConfig() {
       setLoading(true);
       try {
         const pda = deriveTriggerPda(publicKey);
-        const data = await program.account.triggerConfig.fetch(pda);
+        const data = await (program.account as any).triggerConfig.fetch(pda);
         setTrigger({ ...data, pda });
       } catch {
         setTrigger(null); // trigger does not exist yet
