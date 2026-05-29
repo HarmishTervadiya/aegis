@@ -1,0 +1,833 @@
+{
+  "address": "5f3FSmoxZ6fpiQtdBoaPdAyCwUXmqFSRGBpSpRP9C4iU",
+  "metadata": {
+    "name": "aegis",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "cancel_trigger",
+      "discriminator": [
+        208,
+        139,
+        249,
+        52,
+        247,
+        33,
+        57,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "trigger_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  105,
+                  103,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "trigger_config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit",
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "user_vault"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "execute_trigger",
+      "discriminator": [
+        158,
+        99,
+        201,
+        137,
+        192,
+        20,
+        236,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "trigger_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  105,
+                  103,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trigger_log",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "log_index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "relations": [
+            "trigger_config",
+            "user_vault"
+          ]
+        },
+        {
+          "name": "crank",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "log_index",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_vault",
+      "discriminator": [
+        48,
+        191,
+        163,
+        44,
+        71,
+        129,
+        63,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_trigger",
+      "discriminator": [
+        136,
+        163,
+        123,
+        35,
+        241,
+        129,
+        143,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "trigger_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  105,
+                  103,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "user_vault"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "mode",
+          "type": {
+            "defined": {
+              "name": "TriggerMode"
+            }
+          }
+        },
+        {
+          "name": "defense_threshold_bps",
+          "type": "u64"
+        },
+        {
+          "name": "offense_threshold_bps",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trigger_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  105,
+                  103,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "user_vault"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "TriggerConfig",
+      "discriminator": [
+        234,
+        212,
+        204,
+        15,
+        217,
+        116,
+        90,
+        35
+      ]
+    },
+    {
+      "name": "TriggerLog",
+      "discriminator": [
+        174,
+        78,
+        223,
+        202,
+        119,
+        117,
+        188,
+        121
+      ]
+    },
+    {
+      "name": "UserVault",
+      "discriminator": [
+        23,
+        76,
+        96,
+        159,
+        210,
+        10,
+        5,
+        22
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ConditionNotMet",
+      "msg": "Trigger condition not met — transaction reverted by on-chain validation"
+    },
+    {
+      "code": 6001,
+      "name": "MathOverflow",
+      "msg": "Integer overflow in calculation"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAccountOwner",
+      "msg": "Account not owned by the expected program"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAccountData",
+      "msg": "Account data is too short or malformed"
+    },
+    {
+      "code": 6004,
+      "name": "DeserializationFailed",
+      "msg": "Failed to deserialize account bytes at expected offset"
+    },
+    {
+      "code": 6005,
+      "name": "TriggerNotActive",
+      "msg": "Trigger is not active"
+    },
+    {
+      "code": 6006,
+      "name": "TriggerStillActive",
+      "msg": "Cancel the trigger before withdrawing"
+    },
+    {
+      "code": 6007,
+      "name": "NoDeployedFunds",
+      "msg": "No funds are currently deployed in a protocol"
+    },
+    {
+      "code": 6008,
+      "name": "FundsNotInExpectedProtocol",
+      "msg": "Funds are not in the protocol required for this trigger mode"
+    },
+    {
+      "code": 6009,
+      "name": "AlreadyInOptimalProtocol",
+      "msg": "Funds are already in the optimal protocol — no move needed"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidThreshold",
+      "msg": "Threshold must be between 1 and 10000 basis points"
+    }
+  ],
+  "types": [
+    {
+      "name": "Protocol",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Idle"
+          },
+          {
+            "name": "Kamino"
+          },
+          {
+            "name": "MarginFi"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TriggerConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "mode",
+            "type": {
+              "defined": {
+                "name": "TriggerMode"
+              }
+            }
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "last_executed",
+            "type": "i64"
+          },
+          {
+            "name": "execution_count",
+            "type": "u64"
+          },
+          {
+            "name": "defense_threshold_bps",
+            "type": "u64"
+          },
+          {
+            "name": "offense_threshold_bps",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TriggerLog",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "executed_at",
+            "type": "i64"
+          },
+          {
+            "name": "mode",
+            "type": {
+              "defined": {
+                "name": "TriggerMode"
+              }
+            }
+          },
+          {
+            "name": "from_protocol",
+            "type": {
+              "defined": {
+                "name": "Protocol"
+              }
+            }
+          },
+          {
+            "name": "to_protocol",
+            "type": {
+              "defined": {
+                "name": "Protocol"
+              }
+            }
+          },
+          {
+            "name": "amount_moved",
+            "type": "u64"
+          },
+          {
+            "name": "marginfi_utilization_bps",
+            "type": "u64"
+          },
+          {
+            "name": "kamino_utilization_bps",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TriggerMode",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Defense"
+          },
+          {
+            "name": "Offense"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "current_protocol",
+            "type": {
+              "defined": {
+                "name": "Protocol"
+              }
+            }
+          },
+          {
+            "name": "marginfi_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "kamino_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
