@@ -117,6 +117,7 @@ pub struct ExecuteTrigger<'info> {
     )]
     pub trigger_log: Account<'info, TriggerLog>,
 
+    /// CHECK: validated by CPI
     pub owner: AccountInfo<'info>,
 
     #[account(mut)]

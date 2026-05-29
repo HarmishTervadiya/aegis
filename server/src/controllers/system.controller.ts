@@ -4,6 +4,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { serializeTrigger } from "../utils/triggerMode.js";
 import { cache } from "../cache.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import {
+  pollProtocolState,
+  fetchActiveTriggers,
+  evaluateTriggers,
+} from "../services/watcher.service.js";
+import { fireExecuteTrigger } from "../services/executor.service.js";
 
 export const getHealth = asyncHandler(async (req: Request, res: Response) => {
   res.json(
@@ -75,13 +81,24 @@ export const postCrank = asyncHandler(async (req: Request, res: Response) => {
   }
   lastManualCrank = Date.now();
 
+  await pollProtocolState();
+  await fetchActiveTriggers();
+
+  const toFire = evaluateTriggers();
+  const results = [];
+
+  for (const trigger of toFire) {
+    const result = await fireExecuteTrigger(trigger);
+    results.push({ owner: trigger.owner.toString(), result });
+  }
+
   res.json(
     new ApiResponse(true, {
       polledAt: cache.lastPollAt,
       triggersEvaluated: cache.activeTriggers.size,
-      triggered: 0,
-      results: [],
-      message: "Crank logic (Module 2) is not implemented yet.",
+      triggered: toFire.length,
+      results,
+      message: "Manual crank completed",
     }),
   );
 });

@@ -22,8 +22,6 @@ solana-test-validator \
   --clone 2UywZrUdyqs5vDchy7fKQJKau2RVyuzBev2XKGPDSiX1 \
   --clone 8NXMyRD91p3nof61BTkJvrfpGTASHygz1cUvc3HvwyGS \
   --clone d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q \
-  --account LJRdqYR8TiqxYY1w1zyoB1gDfZPMGo4ZPRDFdxgSMsC ./scripts/mock_marginfi_high.json \
-  --account 5HH4TwFfdUazDEPh6TfJNiehBPppShsTeF7FHWeAAxnr ./scripts/mock_kamino_high.json \
   --clone D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59 \
   --clone Bgq7trRgVMeq33yt235zM2onQ4bRDBsY5EWiTetF4qw6 \
   --clone BbDUrk1bVtSixgQsPLBJFZEF7mwGstnD5joA1WzYvYFX \
