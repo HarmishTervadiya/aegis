@@ -18,6 +18,14 @@ export default function Dashboard() {
     ? Object.keys(vault.currentProtocol)[0]
     : "Idle";
 
+  // Friendly display name
+  const currentProtocolLabel =
+    currentProtocol === "marginFi"
+      ? "MarginFi"
+      : currentProtocol === "kamino"
+        ? "Kamino"
+        : "Idle";
+
   const lifetimeYield = vault?.lifetimeYield
     ? vault.lifetimeYield.toNumber() / 1_000_000
     : 0;
@@ -29,8 +37,19 @@ export default function Dashboard() {
     ? (Number(dbVault.apyAtEntry) / 100).toFixed(2)
     : "0.00";
 
+  // Determine protocol dot color
+  const protocolDotColor =
+    currentProtocol === "marginFi"
+      ? "bg-marginfi"
+      : currentProtocol === "kamino"
+        ? "bg-kamino"
+        : "bg-muted";
+
+  // Skeleton state: wallet loaded vault data not yet there
+  const vaultLoading = vault === undefined;
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className="max-w-3xl mx-auto px-4 py-10 transition-opacity duration-200">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-primary">Protocol Health</h1>
         <p className="text-sm text-secondary mt-1">
@@ -47,33 +66,72 @@ export default function Dashboard() {
 
       {/* Yield & Status Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Current Protocol card */}
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-xs text-secondary">Current Protocol</p>
-          <p className="text-lg font-bold text-primary mt-1 capitalize">
-            {currentProtocol}
-          </p>
+          {vaultLoading ? (
+            <div className="mt-2 h-6 w-20 rounded-md bg-border animate-pulse" />
+          ) : (
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${protocolDotColor}`}
+              />
+              <p className="text-lg font-bold text-primary">
+                {currentProtocolLabel}
+              </p>
+            </div>
+          )}
         </div>
 
+        {/* Unrealized Yield card */}
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-xs text-secondary">Unrealized Yield</p>
-          <p className="text-lg font-bold text-yellow-400 mt-1 font-mono tabular-nums">
-            +${unrealizedYield.toFixed(6)}
-          </p>
-          <p className="text-[10px] text-muted mt-0.5">Live ↑</p>
+          {vaultLoading ? (
+            <div className="mt-2 h-6 w-24 rounded-md bg-border animate-pulse" />
+          ) : vault ? (
+            <>
+              <p className="text-lg font-bold text-yellow-400 mt-1 font-mono tabular-nums">
+                +${unrealizedYield.toFixed(6)}
+              </p>
+              <p className="text-[10px] text-muted mt-0.5">Live ↑</p>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-secondary mt-1 font-mono">—</p>
+          )}
         </div>
 
+        {/* Lifetime Realized card */}
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-xs text-secondary">Lifetime Realized</p>
-          <p className="text-lg font-bold text-green mt-1 font-mono">
-            +${lifetimeYield.toFixed(4)}
-          </p>
-          <p className="text-[10px] text-muted mt-0.5">After hops</p>
+          {vaultLoading ? (
+            <div className="mt-2 h-6 w-20 rounded-md bg-border animate-pulse" />
+          ) : vault ? (
+            <>
+              <p className="text-lg font-bold text-green mt-1 font-mono">
+                +${lifetimeYield.toFixed(4)}
+              </p>
+              <p className="text-[10px] text-muted mt-0.5">After hops</p>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-secondary mt-1 font-mono">—</p>
+          )}
         </div>
 
+        {/* Est. APY card */}
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-xs text-secondary">Est. APY at Entry</p>
-          <p className="text-lg font-bold text-primary mt-1">{estApyPct}%</p>
-          <p className="text-[10px] text-muted mt-0.5">When deployed</p>
+          {vaultLoading ? (
+            <div className="mt-2 h-6 w-16 rounded-md bg-border animate-pulse" />
+          ) : vault ? (
+            <>
+              <p className="text-lg font-bold text-primary mt-1">
+                {estApyPct}%
+              </p>
+              <p className="text-[10px] text-muted mt-0.5">When deployed</p>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-secondary mt-1 font-mono">—</p>
+          )}
         </div>
       </div>
 

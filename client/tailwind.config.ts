@@ -15,7 +15,7 @@ export default {
         green: "#22c55e",
         amber: "#f59e0b",
         red: "#ef4444",
-        purple: "#a78bfa",
+        purple: "#f8fafc",
         // Protocol colors
         marginfi: "#699BF7",
         kamino: "#9FE2BF",

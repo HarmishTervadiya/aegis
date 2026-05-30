@@ -1,31 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useAegisProgram } from "./useAegisProgram";
 import { deriveVaultPda } from "../lib/pdas";
-import { useAuth } from "./useAuth";
+import { useAuthStore } from "../stores/authStore";
+import { useVaultStore } from "../stores/vaultStore";
 import api from "../lib/api";
 
 export function useUserVault() {
   const { publicKey } = useWallet();
   const program = useAegisProgram();
-  const { authed } = useAuth();
-  const [vault, setVault] = useState<any>(null);
-  const [dbVault, setDbVault] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const { authed } = useAuthStore();
+  const { vault, dbVault, loading, setVault, setDbVault, setLoading } =
+    useVaultStore();
 
   const fetchVault = useCallback(async () => {
     if (!publicKey || !program) return;
     setLoading(true);
 
-    // Run on-chain fetch and API fetch in parallel — don't wait for one before the other
+    // Fetch on-chain state and DB state in parallel — no sequential blocking
     const [onChainResult, apiResult] = await Promise.allSettled([
-      // 1. On-chain vault (authoritative for amounts)
       (async () => {
         const pda = deriveVaultPda(publicKey);
         const data = await (program.account as any).userVault.fetch(pda);
         return { ...data, pda };
       })(),
-      // 2. DB vault (has depositedAt + apyAtEntry for yield ticking)
       api.get("/api/me").then((res) => res.data?.vault ?? null),
     ]);
 
@@ -38,7 +36,7 @@ export function useUserVault() {
     if (apiResult.status === "fulfilled") {
       setDbVault(apiResult.value);
     }
-    // If API failed (e.g. 401 before cookie ready), keep previous dbVault — don't reset to null
+    // On 401 (cookie not ready), keep previous dbVault — don't flash null
 
     setLoading(false);
   }, [publicKey, program]);
@@ -50,7 +48,7 @@ export function useUserVault() {
       return;
     }
     fetchVault();
-    // Re-fetch when auth state changes (cookie becomes available after login)
+    // Re-fetch when auth state changes so dbVault populates after login
   }, [publicKey, program, authed]);
 
   return { vault, dbVault, loading, refreshVault: fetchVault };

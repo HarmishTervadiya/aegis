@@ -44,25 +44,56 @@ export default function Navbar() {
             Aegis
           </Link>
           <div className="hidden md:flex items-center gap-1">
-            {links.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className={`
-                  px-3 py-1.5 rounded-md text-sm transition-colors
-                  ${
-                    pathname === to
-                      ? "text-primary bg-bg"
-                      : "text-secondary hover:text-primary"
-                  }
-                `}
-              >
-                {label}
-              </Link>
-            ))}
+            {links.map(({ to, label }) => {
+              const isActive = pathname === to;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`
+                    relative px-3 py-1.5 text-sm transition-colors duration-150
+                    ${isActive ? "text-primary" : "text-secondary hover:text-primary"}
+                  `}
+                >
+                  {label}
+                  {/* Smooth underline indicator for active route */}
+                  <span
+                    className={`
+                      absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-purple
+                      transition-all duration-200
+                      ${isActive ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}
+                    `}
+                    style={{ transformOrigin: "center" }}
+                  />
+                </Link>
+              );
+            })}
           </div>
         </div>
         <WalletMultiButton />
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden flex items-center overflow-x-auto px-4 py-3 gap-4 border-t border-border/50">
+        {links.map(({ to, label }) => {
+          const isActive = pathname === to;
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={`
+                whitespace-nowrap px-3 py-1.5 text-sm rounded-full transition-colors duration-150
+                ${
+                  isActive
+                    ? "bg-purple/10 text-primary"
+                    : "text-secondary hover:text-primary"
+                }
+              `}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

@@ -1,14 +1,14 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import bs58 from "bs58";
 import api from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
 
 export function useAuth() {
   const { publicKey, signMessage } = useWallet();
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const { authed, checking, setAuthed, setChecking } = useAuthStore();
 
-  // On mount, ping /api/me to check if the cookie is still valid
+  // On mount, ping /api/me to check if the HttpOnly cookie is still valid
   useEffect(() => {
     api
       .get("/api/me")
@@ -21,17 +21,15 @@ export function useAuth() {
     if (!publicKey || !signMessage) return;
 
     try {
-      // Step 1: get nonce
       const { message } = await api
         .get(`/auth/nonce?wallet=${publicKey.toString()}`)
         .then((r) => r.data);
 
-      // Step 2: sign with wallet — no SOL spent, just a signature
       const encoded = new TextEncoder().encode(message);
       const signature = await signMessage(encoded);
       const sigB58 = bs58.encode(signature);
 
-      // Step 3: verify — server sets HttpOnly cookie, no token in response
+      // Server sets HttpOnly cookie — no token returned in body
       await api.post("/auth/verify", {
         wallet: publicKey.toString(),
         signature: sigB58,

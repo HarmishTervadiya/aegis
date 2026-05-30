@@ -1,4 +1,3 @@
-import StatusDot from "../shared/StatusDot";
 import UtilizationBar from "./UtilizationBar";
 import { formatBps } from "../../lib/format";
 
@@ -16,7 +15,6 @@ export default function ProtocolCard({
   thresholdBps,
 }: Props) {
   const pct = utilizationBps / 100;
-  const status = pct >= 90 ? "danger" : pct >= 70 ? "warning" : "safe";
 
   // Mock DeFi Interest Rate Curve
   const calculateMockApy = (utilPct: number) => {
@@ -32,7 +30,6 @@ export default function ProtocolCard({
     <div className="bg-surface border border-border rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <StatusDot status={status} />
           <span className="text-sm font-medium text-secondary">{name}</span>
         </div>
         <span className="text-xs text-muted">USDC Pool</span>

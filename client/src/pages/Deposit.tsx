@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import toast from "react-hot-toast";
 import { useAegisProgram } from "../hooks/useAegisProgram";
@@ -9,7 +9,6 @@ import {
   deriveVaultTokenPda,
   deriveTriggerPda,
 } from "../lib/pdas";
-import TxButton from "../components/shared/TxButton";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
@@ -19,6 +18,75 @@ import api from "../lib/api";
 const USDC_MINT = new PublicKey(
   import.meta.env.VITE_USDC_MINT || import.meta.env.VITE_MARGINFI_BANK,
 );
+
+interface TxButtonProps {
+  onClick: () => Promise<string>;
+  children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+}
+function TxButton({
+  onClick,
+  children,
+  className = "",
+  disabled,
+}: TxButtonProps) {
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    if (loading || disabled) return;
+    setLoading(true);
+    try {
+      const sig = await onClick();
+      toast.success(
+        <span>
+          Transaction confirmed!{" "}
+          <a
+            href={`https://explorer.solana.com/tx/${sig}?cluster=devnet`}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            View
+          </a>
+        </span>,
+      );
+    } catch (err: any) {
+      toast.error(err?.message ?? "Transaction failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading || disabled}
+      className={`relative inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+        bg-purple text-bg hover:bg-purple/80 disabled:opacity-50 disabled:cursor-not-allowed
+        ${className}`}
+    >
+      {loading && (
+        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      )}
+      {children}
+    </button>
+  );
+}
+
+/* ── Protocol color helpers ── */
+function protocolRingColor(proto: string) {
+  if (proto === "MarginFi") return "ring-marginfi/30 bg-marginfi/5";
+  if (proto === "Kamino") return "ring-kamino/30 bg-kamino/5";
+  return "ring-border bg-bg";
+}
+function protocolInnerColor(proto: string) {
+  if (proto === "MarginFi") return "bg-marginfi/15 text-marginfi";
+  if (proto === "Kamino") return "bg-kamino/15 text-kamino";
+  return "bg-surface text-muted";
+}
+
+/* ── Page Component ── */
 
 export default function Deposit() {
   const { publicKey } = useWallet();
@@ -60,6 +128,15 @@ export default function Deposit() {
   const [amount, setAmount] = useState("");
   const [defThresh, setDefThresh] = useState("9000");
   const [offThresh, setOffThresh] = useState("200");
+
+  // Sync threshold inputs from on-chain values when trigger loads
+  useEffect(() => {
+    if (!trigger) return;
+    if (trigger.defenseThresholdBps !== undefined)
+      setDefThresh(trigger.defenseThresholdBps.toString());
+    if (trigger.offenseThresholdBps !== undefined)
+      setOffThresh(trigger.offenseThresholdBps.toString());
+  }, [trigger]);
 
   const vaultExists = !!vault;
 
@@ -163,7 +240,7 @@ export default function Deposit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 flex flex-col gap-6">
+    <div className="max-w-4xl mx-auto px-4 py-10 flex flex-col gap-6 transition-opacity duration-200">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Controls */}
         <div className="md:col-span-2 flex flex-col gap-6">
@@ -192,9 +269,10 @@ export default function Deposit() {
             </div>
           </div>
 
+          {/* Step 1: Initialize vault — hidden once vault exists */}
           {!vaultExists && (
             <div className="bg-surface border border-border rounded-xl p-5 shadow-sm">
-              <h2 className="text-sm font-medium text-secondary mb-1">
+              <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-1">
                 Step 1
               </h2>
               <p className="text-primary font-medium mb-4">
@@ -207,11 +285,14 @@ export default function Deposit() {
           <div
             className={`bg-surface border border-border rounded-xl p-5 shadow-sm ${!vaultExists ? "opacity-40 pointer-events-none" : ""}`}
           >
-            <h2 className="text-sm font-medium text-secondary mb-1">
-              {!vaultExists ? "Step 2" : "Deposit USDC"}
-            </h2>
+            {/* Only show "Step 2" label when vault doesn't exist yet */}
+            {!vaultExists && (
+              <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-1">
+                Step 2
+              </h2>
+            )}
             <p className="text-primary font-medium mb-4">
-              Fund your automation vault
+              {vaultExists ? "Deposit USDC" : "Fund your automation vault"}
             </p>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -252,7 +333,7 @@ export default function Deposit() {
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold text-sm">Defense Mode</h3>
                   <div
-                    className={`text-xs px-2 py-1 rounded-full ${defActive ? "bg-green-500/20 text-green-500" : "bg-muted/20 text-muted"}`}
+                    className={`text-xs px-2 py-1 rounded-full ${defActive ? "bg-green/20 text-green" : "bg-muted/20 text-muted"}`}
                   >
                     {defActive ? "Active" : "Inactive"}
                   </div>
@@ -277,12 +358,20 @@ export default function Deposit() {
                   </p>
                 </div>
                 {defActive ? (
-                  <TxButton
-                    onClick={() => handleSetTrigger("Defense", false)}
-                    className="w-full btn-outline border-border text-secondary text-xs"
-                  >
-                    Deactivate Defense
-                  </TxButton>
+                  <div className="flex gap-2">
+                    <TxButton
+                      onClick={() => handleSetTrigger("Defense", true)}
+                      className="flex-1 text-xs"
+                    >
+                      Update
+                    </TxButton>
+                    <TxButton
+                      onClick={() => handleSetTrigger("Defense", false)}
+                      className="flex-1 !bg-surface border border-border !text-secondary hover:!text-red text-xs"
+                    >
+                      Deactivate
+                    </TxButton>
+                  </div>
                 ) : (
                   <TxButton
                     onClick={() => handleSetTrigger("Defense", true)}
@@ -323,12 +412,20 @@ export default function Deposit() {
                   </p>
                 </div>
                 {offActive ? (
-                  <TxButton
-                    onClick={() => handleSetTrigger("Offense", false)}
-                    className="w-full btn-outline border-border text-secondary text-xs"
-                  >
-                    Deactivate Offense
-                  </TxButton>
+                  <div className="flex gap-2">
+                    <TxButton
+                      onClick={() => handleSetTrigger("Offense", true)}
+                      className="flex-1 text-xs"
+                    >
+                      Update
+                    </TxButton>
+                    <TxButton
+                      onClick={() => handleSetTrigger("Offense", false)}
+                      className="flex-1 !bg-surface border border-border !text-secondary hover:!text-red text-xs"
+                    >
+                      Deactivate
+                    </TxButton>
+                  </div>
                 ) : (
                   <TxButton
                     onClick={() => handleSetTrigger("Offense", true)}
@@ -349,14 +446,20 @@ export default function Deposit() {
               Current Deployment
             </h2>
 
+            {/* Outer ring */}
             <div
-              className={`w-32 h-32 rounded-full flex items-center justify-center mb-6 shadow-inner ${currentProtocolStr === "Idle" ? "bg-base-200" : "bg-primary/10"}`}
+              className={`w-32 h-32 rounded-full flex items-center justify-center mb-6 ring-2 ${protocolRingColor(currentProtocolStr)}`}
             >
+              {/* Inner circle */}
               <div
-                className={`w-24 h-24 rounded-full text-surface flex items-center justify-center shadow-lg ${currentProtocolStr === "Idle" ? "bg-base-300 text-muted" : "bg-primary text-primary-content"}`}
+                className={`w-24 h-24 rounded-full flex items-center justify-center shadow-lg ${protocolInnerColor(currentProtocolStr)}`}
               >
                 {currentProtocolStr === "MarginFi" && (
-                  <span className="font-bold text-xl">MarginFi</span>
+                  <span className="font-bold text-lg leading-tight">
+                    Margin
+                    <br />
+                    Fi
+                  </span>
                 )}
                 {currentProtocolStr === "Kamino" && (
                   <span className="font-bold text-xl">Kamino</span>
@@ -383,7 +486,9 @@ export default function Deposit() {
       {/* BOTTOM ROW: Activity Feed Widget */}
       <div className="bg-surface border border-border rounded-xl p-5 shadow-sm mt-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-semibold text-lg">Recent Crank Executions</h2>
+          <h2 className="font-semibold text-lg text-primary">
+            Recent Crank Executions
+          </h2>
         </div>
         <ActivityFeed limit={5} />
       </div>

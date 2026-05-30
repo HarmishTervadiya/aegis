@@ -1,38 +1,28 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import api from "../lib/api";
+import { useHealthStore } from "../stores/healthStore";
 
-interface ProtocolState {
-  utilizationBps: number;
-  utilizationPct: number;
-  updatedAt: string | null;
-}
+const DEFAULT_INTERVAL_MS = 15_000;
 
-interface HealthData {
-  marginfi: ProtocolState;
-  kamino: ProtocolState;
-  lastPollAt: string | null;
-}
+export function useProtocolHealth(intervalMs = DEFAULT_INTERVAL_MS) {
+  const { data, loading, error, setData, setLoading, setError } =
+    useHealthStore();
 
-export function useProtocolHealth(intervalMs = 15_000) {
-  const [data, setData] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const fetchHealth = async () => {
+    try {
+      const res = await api.get("/api/health");
+      setData(res.data);
+      setError(null);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to fetch health");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = await api.get("/api/health");
-        setData(res.data);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetch();
-    const id = setInterval(fetch, intervalMs);
+    fetchHealth();
+    const id = setInterval(fetchHealth, intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
 
