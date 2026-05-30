@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run src/index.ts",
+    "start": "concurrently \"bun --smol run src/index.ts\" \"bun --smol run src/mock/fluctuate.ts\"",
     "dev": "bun --watch run src/index.ts",
     "init-mock-markets": "bun run src/mock/init_markets.ts",
     "fluctuate": "bun run src/mock/fluctuate.ts"
@@ -17,6 +17,7 @@
     "@solana/web3.js": "^1.95.0",
     "@types/cookie-parser": "^1.4.10",
     "bs58": "^6.0.0",
+    "concurrently": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

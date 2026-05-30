@@ -109,7 +109,7 @@ export const verifySignature = asyncHandler(
       res.cookie("aegis_token", token, {
         httpOnly: true,
         secure: IS_PROD, // HTTPS only in production
-        sameSite: IS_PROD ? "strict" : "lax",
+        sameSite: IS_PROD ? "none" : "lax", // 'none' required for cross-domain cookies from Render -> Vercel
         maxAge: 24 * 60 * 60 * 1000, // 24h in ms
         path: "/",
       });

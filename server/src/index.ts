@@ -34,9 +34,20 @@ const POLL = parseInt(process.env.POLL_INTERVAL_SECONDS || "15");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+const allowedOrigins = [
+  FRONTEND_URL,
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true, // allow cookies cross-origin
   }),
 );
