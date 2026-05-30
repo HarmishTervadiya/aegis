@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import BN from "bn.js";
 
 dotenv.config();
 
@@ -24,55 +25,96 @@ const provider = new AnchorProvider(connection, wallet, {
   commitment: "confirmed",
 });
 
-const idl = JSON.parse(
-  fs.readFileSync(
-    path.resolve(
-      __dirname,
-      "../../../mock-lending/target/idl/mock_lending.json",
-    ),
-    "utf8",
-  ),
+const idlPath = path.resolve(
+  __dirname,
+  "../../../mock-lending/target/idl/mock_lending.json",
 );
+const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
 const program = new Program(idl, provider);
 
 const marginfiMarket = new PublicKey(process.env.MOCK_MARGINFI_MARKET!);
 const kaminoMarket = new PublicKey(process.env.MOCK_KAMINO_MARKET!);
 
-import BN from "bn.js";
+// Global state
+const ASSETS = 10_000_000_000; // 10k USDC
+let currentMarginfiUtil = 50; // start at 50%
+let currentKaminoUtil = 50; // start at 50%
+let isUpdating = false;
 
-async function fluctuate() {
-  const assets = 10_000_000_000; // 10k USDC
-  const marginfiUtil = Math.floor(Math.random() * 80) + 10;
-  const kaminoUtil = Math.floor(Math.random() * 80) + 10;
+function clamp(val: number, min: number, max: number) {
+  return Math.min(Math.max(val, min), max);
+}
 
-  const marginfiLiabilities = Math.floor((assets * marginfiUtil) / 100);
-  const kaminoLiabilities = Math.floor((assets * kaminoUtil) / 100);
-
-  console.log(`[Fluctuate] MarginFi: ${marginfiUtil}%, Kamino: ${kaminoUtil}%`);
+async function updateMarkets(mfiUtil: number, kamUtil: number, type: string) {
+  if (isUpdating) {
+    console.log(`[Fluctuate] Skipping ${type} update - collision prevented`);
+    return;
+  }
+  isUpdating = true;
 
   try {
+    const marginfiLiabilities = Math.floor((ASSETS * mfiUtil) / 100);
+    const kaminoLiabilities = Math.floor((ASSETS * kamUtil) / 100);
+
+    console.log(
+      `[Fluctuate ${type}] MarginFi: ${mfiUtil}%, Kamino: ${kamUtil}%`,
+    );
+
     const tx1 = await program.methods
-      .updateMarket(new BN(assets), new BN(marginfiLiabilities))
-      .accounts({
-        market: marginfiMarket,
-        authority: authority.publicKey,
-      })
+      .updateMarket(new BN(ASSETS), new BN(marginfiLiabilities))
+      .accounts({ market: marginfiMarket, authority: authority.publicKey })
       .rpc();
-    console.log(`MarginFi updated: ${tx1}`);
 
     const tx2 = await program.methods
-      .updateMarket(new BN(assets), new BN(kaminoLiabilities))
-      .accounts({
-        market: kaminoMarket,
-        authority: authority.publicKey,
-      })
+      .updateMarket(new BN(ASSETS), new BN(kaminoLiabilities))
+      .accounts({ market: kaminoMarket, authority: authority.publicKey })
       .rpc();
-    console.log(`Kamino updated: ${tx2}`);
+
+    // console.log(`  -> TXs: ${tx1.slice(0,8)}... / ${tx2.slice(0,8)}...`);
   } catch (err: any) {
-    console.error("Error updating markets:", err.message);
+    console.error(`Error updating markets (${type}):`, err.message);
+  } finally {
+    isUpdating = false;
   }
 }
 
+// Minor fluctuation: +/- 2%
+async function runMinorFluctuation() {
+  currentMarginfiUtil = clamp(
+    currentMarginfiUtil + (Math.random() * 4 - 2),
+    10,
+    90,
+  );
+  currentKaminoUtil = clamp(
+    currentKaminoUtil + (Math.random() * 4 - 2),
+    10,
+    90,
+  );
+  await updateMarkets(currentMarginfiUtil, currentKaminoUtil, "Minor");
+}
+
+// Major fluctuation: +/- 30%
+async function runMajorFluctuation() {
+  currentMarginfiUtil = clamp(
+    currentMarginfiUtil + (Math.random() * 60 - 30),
+    10,
+    90,
+  );
+  currentKaminoUtil = clamp(
+    currentKaminoUtil + (Math.random() * 60 - 30),
+    10,
+    90,
+  );
+  await updateMarkets(currentMarginfiUtil, currentKaminoUtil, "MAJOR");
+}
+
 console.log("Starting devnet mock market fluctuation service...");
-setInterval(fluctuate, 30_000);
-fluctuate();
+
+// Run minor fluctuations every 3 seconds
+setInterval(runMinorFluctuation, 3_000);
+
+// Run major fluctuations every 12 seconds
+setInterval(runMajorFluctuation, 12_000);
+
+// Initial update
+runMinorFluctuation();

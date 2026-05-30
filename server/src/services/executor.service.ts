@@ -1,9 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
 import { program, crankKeypair } from "../rpc.js";
 import { cache } from "../cache.js";
 import type { CachedTrigger } from "../cache.js";
 import { deriveVaultPda } from "../utils/pda.js";
 import { formatMode } from "../utils/triggerMode.js";
+
+import { MARGINFI_BANK, KAMINO_RESERVE } from "../utils/constants.js";
 
 const inFlight = new Set<string>();
 
@@ -30,21 +33,45 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
 
   inFlight.add(key);
   try {
-    const vaultPda = deriveVaultPda(
-      new PublicKey(trigger.owner),
+    const ownerPubkey = new anchor.web3.PublicKey(trigger.owner);
+    const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), ownerPubkey.toBuffer()],
+      program.programId,
+    );
+    const [vaultTokenAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault_token"), ownerPubkey.toBuffer()],
+      program.programId,
+    );
+    const [triggerLog] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("log"),
+        ownerPubkey.toBuffer(),
+        new anchor.BN(trigger.executionCount).toArrayLike(Buffer, "le", 8),
+      ],
       program.programId,
     );
 
+    const remainingAccounts = [
+      { pubkey: MARGINFI_BANK, isSigner: false, isWritable: false },
+      { pubkey: KAMINO_RESERVE, isSigner: false, isWritable: false },
+    ];
+
     // Build the transaction
-    // Note: If executeTrigger requires specific protocol accounts like MarginFi and Kamino,
-    // they should be appended here. Anchor might automatically resolve some if defined in IDL.
     const txSig = await (program.methods as any)
-      .executeTrigger()
+      .executeTrigger(new anchor.BN(trigger.executionCount))
       .accounts({
-        crank: crankKeypair.publicKey,
-        vault: vaultPda,
         triggerConfig: trigger.triggerPda,
-      } as any)
+        userVault: vaultPda,
+        vaultTokenAccount: vaultTokenAccount,
+        triggerLog: triggerLog,
+        owner: ownerPubkey,
+        crank: crankKeypair.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: new anchor.web3.PublicKey(
+          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        ),
+      })
+      .remainingAccounts(remainingAccounts)
       .signers([crankKeypair])
       .rpc();
 

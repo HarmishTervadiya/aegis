@@ -5,6 +5,7 @@ const links = [
   { to: "/", label: "Dashboard" },
   { to: "/deposit", label: "Deposit" },
   { to: "/portfolio", label: "Portfolio" },
+  { to: "/activity", label: "Activity" },
 ];
 
 export default function Navbar() {

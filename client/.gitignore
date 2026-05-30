@@ -38,3 +38,8 @@ Thumbs.db
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Keypairs
+*-keypair.json
+*keypair.json
+deploy-key.json

@@ -9,28 +9,27 @@ export function useTriggerConfig() {
   const [trigger, setTrigger] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const fetchTrigger = async () => {
+    if (!publicKey || !program) return;
+    setLoading(true);
+    try {
+      const pda = deriveTriggerPda(publicKey);
+      const data = await (program.account as any).triggerConfig.fetch(pda);
+      setTrigger({ ...data, pda });
+    } catch {
+      setTrigger(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!publicKey || !program) {
       setTrigger(null);
       return;
     }
-
-    const fetch = async () => {
-      setLoading(true);
-      try {
-        const pda = deriveTriggerPda(publicKey);
-        const data = await (program.account as any).triggerConfig.fetch(pda);
-        setTrigger({ ...data, pda });
-      } catch {
-        setTrigger(null); // trigger does not exist yet
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetch();
-    // In a real app we might poll this or use websockets, but for now fetch once
+    fetchTrigger();
   }, [publicKey, program]);
 
-  return { trigger, loading };
+  return { trigger, loading, refreshTrigger: fetchTrigger };
 }

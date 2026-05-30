@@ -115,9 +115,9 @@ export async function fetchActiveTriggers() {
           owner: acc.owner,
           mode: acc.mode,
           isActive: acc.isActive,
-          defenseThresholdBps: acc.defenseThresholdBps,
-          offenseThresholdBps: acc.offenseThresholdBps,
-          executionCount: acc.executionCount,
+          defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
+          offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
+          executionCount: acc.executionCount.toNumber(),
           lastExecuted: acc.lastExecuted.toNumber(),
         });
       }
@@ -164,11 +164,9 @@ export function evaluateTriggers(): CachedTrigger[] {
         shouldFire = true;
       }
     } else if (trigger.mode.offense) {
-      // In Offense, user wants to move into a protocol if its util is LOW (< offenseThreshold)
-      if (
-        mfiUtil < trigger.offenseThresholdBps ||
-        kamUtil < trigger.offenseThresholdBps
-      ) {
+      // In Offense, user wants to move to the protocol with higher utilization if the difference exceeds the threshold
+      const diff = Math.abs(mfiUtil - kamUtil);
+      if (diff > trigger.offenseThresholdBps) {
         shouldFire = true;
       }
     }

@@ -28,3 +28,8 @@ report.*.json
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Keypairs
+*-keypair.json
+*keypair.json
+deploy-key.json
