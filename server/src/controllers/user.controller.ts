@@ -8,22 +8,27 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
   const wallet = req.wallet!;
-  
+
   const user = await prisma.user.upsert({
     where: { walletAddress: wallet },
     update: { updatedAt: new Date() },
-    create: { walletAddress: wallet }
+    create: { walletAddress: wallet },
   });
 
   const trigger = await prisma.triggerConfig.findFirst({
-    where: { userWallet: wallet }
+    where: { userWallet: wallet },
+  });
+
+  const vault = await prisma.userVault.findFirst({
+    where: { userWallet: wallet },
   });
 
   res.json(
     new ApiResponse(true, {
       wallet,
       profile: user,
-      trigger
+      trigger,
+      vault,
     }),
   );
 });
@@ -35,7 +40,7 @@ export const updateMe = asyncHandler(
     const user = await prisma.user.upsert({
       where: { walletAddress: wallet },
       update: { updatedAt: new Date() },
-      create: { walletAddress: wallet }
+      create: { walletAddress: wallet },
     });
     res.json(new ApiResponse(true, { wallet, profile: user }));
   },
@@ -64,6 +69,7 @@ export const getMyExecutions = asyncHandler(
         amountMoved: account.amountMoved.toNumber(),
         marginfiUtilBps: account.marginfiUtilizationBps.toNumber(),
         kaminoUtilBps: account.kaminoUtilizationBps.toNumber(),
+        yieldEarned: account.yieldEarned ? account.yieldEarned.toNumber() : 0,
       }))
       .sort((a: any, b: any) => b.executedAt - a.executedAt);
 

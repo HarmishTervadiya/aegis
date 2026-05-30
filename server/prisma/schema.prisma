@@ -15,6 +15,7 @@ model User {
   
   triggers      TriggerConfig[]
   executions    ExecutionRecord[]
+  vault         UserVault?
 }
 
 model TriggerConfig {
@@ -38,6 +39,19 @@ model ExecutionRecord {
   kaminoUtil   Int
   txSignature  String
   firedAt      DateTime @default(now())
+  yieldEarned  Int      @default(0)
+  
+  user User @relation(fields: [userWallet], references: [walletAddress])
+}
+
+model UserVault {
+  vaultPda        String   @id
+  userWallet      String   @unique
+  currentProtocol String
+  usdcDeposited   BigInt
+  lifetimeYield   BigInt
+  depositedAt     DateTime @default(now())
+  apyAtEntry      Float    @default(0)
   
   user User @relation(fields: [userWallet], references: [walletAddress])
 }

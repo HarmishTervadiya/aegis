@@ -612,6 +612,10 @@
             "type": "u64"
           },
           {
+            "name": "yield_earned",
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -660,6 +664,14 @@
           {
             "name": "kamino_account",
             "type": "pubkey"
+          },
+          {
+            "name": "lifetime_yield",
+            "type": "u64"
+          },
+          {
+            "name": "deposit_timestamp",
+            "type": "i64"
           },
           {
             "name": "bump",

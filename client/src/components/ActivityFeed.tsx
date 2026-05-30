@@ -9,6 +9,7 @@ interface ExecutionRecord {
   kaminoUtil: number;
   firedAt: string;
   txSignature: string;
+  yieldEarned?: number;
 }
 
 interface ActivityFeedProps {
@@ -68,6 +69,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
             <th>Mode</th>
             <th>MarginFi Util</th>
             <th>Kamino Util</th>
+            <th>Yield Earned</th>
             <th>Transaction</th>
           </tr>
         </thead>
@@ -105,6 +107,11 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
                 </td>
                 <td>{(exec.marginfiUtil / 100).toFixed(2)}%</td>
                 <td>{(exec.kaminoUtil / 100).toFixed(2)}%</td>
+                <td className="text-green font-semibold">
+                  {exec.yieldEarned
+                    ? `+$${(exec.yieldEarned / 1_000_000).toFixed(4)}`
+                    : "-"}
+                </td>
                 <td>
                   <a
                     href={`https://explorer.solana.com/tx/${exec.txSignature}?cluster=devnet`}

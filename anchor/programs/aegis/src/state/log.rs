@@ -13,5 +13,6 @@ pub struct TriggerLog {
     pub amount_moved: u64,
     pub marginfi_utilization_bps: u64,
     pub kamino_utilization_bps: u64,
+    pub yield_earned: u64,
     pub bump: u8,
 }

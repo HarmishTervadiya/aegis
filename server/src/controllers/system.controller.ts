@@ -14,11 +14,22 @@ import {
 import { fireExecuteTrigger } from "../services/executor.service.js";
 
 export const getHealth = asyncHandler(async (req: Request, res: Response) => {
+  const result = await prisma.userVault.aggregate({
+    _sum: {
+      lifetimeYield: true,
+    },
+  });
+
+  const projectYield = result._sum.lifetimeYield
+    ? Number(result._sum.lifetimeYield)
+    : 0;
+
   res.json(
     new ApiResponse(true, {
       marginfi: cache.marginfi,
       kamino: cache.kamino,
       lastPollAt: cache.lastPollAt,
+      projectYield,
     }),
   );
 });
@@ -38,9 +49,9 @@ export const getTriggerByOwner = asyncHandler(
     }
 
     const trigger = await prisma.triggerConfig.findFirst({
-      where: { userWallet: req.params.owner as string }
+      where: { userWallet: req.params.owner as string },
     });
-    
+
     if (!trigger) {
       res
         .status(404)
@@ -61,17 +72,18 @@ export const getTriggerByOwner = asyncHandler(
 export const getExecutions = asyncHandler(
   async (req: Request, res: Response) => {
     const executions = await prisma.executionRecord.findMany({
-      orderBy: { firedAt: 'desc' },
-      take: 50
+      orderBy: { firedAt: "desc" },
+      take: 50,
     });
-    
-    const mapped = executions.map(e => ({
+
+    const mapped = executions.map((e) => ({
       owner: e.userWallet,
       mode: e.mode,
       marginfiUtil: e.marginfiUtil,
       kaminoUtil: e.kaminoUtil,
       firedAt: e.firedAt.toISOString(),
-      txSignature: e.txSignature
+      txSignature: e.txSignature,
+      yieldEarned: e.yieldEarned,
     }));
 
     res.json(

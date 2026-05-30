@@ -20,6 +20,19 @@ const POLL_INTERVAL_SECONDS = parseInt(
   process.env.POLL_INTERVAL_SECONDS || "15",
 );
 
+/**
+ * Mirrors the ProtocolCard APY curve in the frontend.
+ * 0–80% util → 0–5% APY (0–500 bps)
+ * 80–100% util → 5–20% APY (500–2000 bps)
+ */
+export function calculateApyFromUtil(utilizationBps: number): number {
+  if (utilizationBps <= 8000) {
+    return (utilizationBps * 500) / 8000;
+  } else {
+    return 500 + ((utilizationBps - 8000) * 1500) / 2000;
+  }
+}
+
 function read128LE(buffer: Buffer, offset: number): bigint {
   const lower = buffer.readBigUInt64LE(offset);
   const upper = buffer.readBigUInt64LE(offset + 8);
@@ -312,16 +325,31 @@ export async function evaluateTriggers(): Promise<TriggerToFire[]> {
     where: {
       OR: [{ defenseActive: true }, { offenseActive: true }],
     },
+    include: {
+      user: {
+        include: { vault: true },
+      },
+    },
   });
 
   for (const trigger of activeTriggers) {
     let firedMode: any = null;
+    const currentProtocol = trigger.user.vault?.currentProtocol || "Idle";
 
     if (trigger.defenseActive) {
+      let conditionMet = false;
       if (
-        mfiUtil > trigger.defenseThresholdBps ||
+        currentProtocol === "marginFi" &&
+        mfiUtil > trigger.defenseThresholdBps
+      ) {
+        conditionMet = true;
+      } else if (
+        currentProtocol === "kamino" &&
         kamUtil > trigger.defenseThresholdBps
       ) {
+        conditionMet = true;
+      }
+      if (conditionMet) {
         firedMode = { defense: {} };
       }
     }
@@ -351,4 +379,119 @@ export async function evaluateTriggers(): Promise<TriggerToFire[]> {
   }
 
   return toFire;
+}
+
+export async function initVaultIndexer() {
+  logger.info("Watcher: Initializing WebSocket Indexer for UserVault...");
+  const discriminator = bs58.encode(
+    Buffer.from([211, 8, 232, 43, 2, 152, 117, 119]),
+  ); // Vault discriminator
+
+  connection.onProgramAccountChange(
+    program.programId,
+    async (keyedAccountInfo) => {
+      const pda = keyedAccountInfo.accountId.toString();
+      try {
+        const acc = program.coder.accounts.decode(
+          "userVault",
+          keyedAccountInfo.accountInfo.data,
+        );
+        const currentProtocol = Object.keys(acc.currentProtocol)[0] as string;
+
+        await prisma.user.upsert({
+          where: { walletAddress: acc.owner.toString() },
+          update: {},
+          create: { walletAddress: acc.owner.toString() },
+        });
+
+        // Determine the APY at entry based on the current active protocol
+        const apyUtilBps =
+          currentProtocol === "marginFi"
+            ? cache.marginfi.utilizationBps
+            : currentProtocol === "kamino"
+              ? cache.kamino.utilizationBps
+              : 0;
+        const apyAtEntry = calculateApyFromUtil(apyUtilBps);
+
+        // Check if protocol has changed — if so reset depositedAt
+        const existing = await prisma.userVault.findUnique({
+          where: { vaultPda: pda },
+        });
+        const protocolChanged =
+          existing && existing.currentProtocol !== currentProtocol;
+
+        await prisma.userVault.upsert({
+          where: { vaultPda: pda },
+          update: {
+            currentProtocol,
+            usdcDeposited: BigInt(acc.usdcDeposited.toString()),
+            lifetimeYield: BigInt(acc.lifetimeYield.toString()),
+            ...(protocolChanged || !existing
+              ? { depositedAt: new Date(), apyAtEntry }
+              : {}),
+          },
+          create: {
+            vaultPda: pda,
+            userWallet: acc.owner.toString(),
+            currentProtocol,
+            usdcDeposited: BigInt(acc.usdcDeposited.toString()),
+            lifetimeYield: BigInt(acc.lifetimeYield.toString()),
+            depositedAt: new Date(),
+            apyAtEntry,
+          },
+        });
+      } catch (err) {}
+    },
+    "confirmed",
+    [{ memcmp: { offset: 0, bytes: discriminator } }],
+  );
+
+  // Sync existing vaults on startup
+  try {
+    const discriminator = bs58.encode(
+      Buffer.from([211, 8, 232, 43, 2, 152, 117, 119]),
+    );
+    const accounts = await connection.getProgramAccounts(program.programId, {
+      filters: [{ memcmp: { offset: 0, bytes: discriminator } }],
+    });
+
+    for (const v of accounts) {
+      try {
+        const acc = program.coder.accounts.decode("userVault", v.account.data);
+        const currentProtocol = Object.keys(acc.currentProtocol)[0] as string;
+        const apyUtilBps =
+          currentProtocol === "marginFi"
+            ? cache.marginfi.utilizationBps
+            : currentProtocol === "kamino"
+              ? cache.kamino.utilizationBps
+              : 0;
+        const apyAtEntry = calculateApyFromUtil(apyUtilBps);
+
+        await prisma.user.upsert({
+          where: { walletAddress: acc.owner.toString() },
+          update: {},
+          create: { walletAddress: acc.owner.toString() },
+        });
+        await prisma.userVault.upsert({
+          where: { vaultPda: v.pubkey.toString() },
+          update: {
+            currentProtocol,
+            usdcDeposited: BigInt(acc.usdcDeposited.toString()),
+            lifetimeYield: BigInt(acc.lifetimeYield.toString()),
+          },
+          create: {
+            vaultPda: v.pubkey.toString(),
+            userWallet: acc.owner.toString(),
+            currentProtocol,
+            usdcDeposited: BigInt(acc.usdcDeposited.toString()),
+            lifetimeYield: BigInt(acc.lifetimeYield.toString()),
+            depositedAt: new Date(),
+            apyAtEntry,
+          },
+        });
+      } catch (err) {
+        // Skip vaults that fail to deserialize (e.g. old 105-byte layout)
+      }
+    }
+  } catch (err) {}
 }

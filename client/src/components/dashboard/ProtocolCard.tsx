@@ -18,6 +18,16 @@ export default function ProtocolCard({
   const pct = utilizationBps / 100;
   const status = pct >= 90 ? "danger" : pct >= 70 ? "warning" : "safe";
 
+  // Mock DeFi Interest Rate Curve
+  const calculateMockApy = (utilPct: number) => {
+    if (utilPct <= 80) {
+      return utilPct * (5 / 80); // Scales 0% to 5% APY
+    } else {
+      return 5 + (utilPct - 80) * ((20 - 5) / (100 - 80)); // Spikes from 5% to 20% APY
+    }
+  };
+  const apy = calculateMockApy(pct);
+
   return (
     <div className="bg-surface border border-border rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -28,12 +38,21 @@ export default function ProtocolCard({
         <span className="text-xs text-muted">USDC Pool</span>
       </div>
 
-      <div>
-        <p className="text-3xl font-mono font-medium text-primary">
-          {pct.toFixed(2)}
-          <span className="text-lg text-secondary">%</span>
-        </p>
-        <p className="text-xs text-muted mt-1">Utilization</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <p className="text-3xl font-mono font-medium text-primary">
+            {pct.toFixed(2)}
+            <span className="text-lg text-secondary">%</span>
+          </p>
+          <p className="text-xs text-muted mt-1">Utilization</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-mono font-medium text-green">
+            {apy.toFixed(2)}
+            <span className="text-sm text-secondary">%</span>
+          </p>
+          <p className="text-xs text-muted mt-1">Estimated APY</p>
+        </div>
       </div>
 
       <UtilizationBar

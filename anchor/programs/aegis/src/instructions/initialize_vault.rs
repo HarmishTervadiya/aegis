@@ -36,10 +36,12 @@ pub fn handler(ctx: Context<InitializeVault>) -> Result<()> {
     let vault = &mut ctx.accounts.user_vault;
     vault.owner = ctx.accounts.owner.key();
     vault.usdc_deposited = 0;
+    vault.lifetime_yield = 0;
     vault.current_protocol = Protocol::Idle;
 
     vault.marginfi_account = Pubkey::default();
     vault.kamino_account = Pubkey::default();
+    vault.deposit_timestamp = 0;
 
     vault.bump = ctx.bumps.user_vault;
 

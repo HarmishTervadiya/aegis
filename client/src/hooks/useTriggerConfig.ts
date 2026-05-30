@@ -12,6 +12,7 @@ export function useTriggerConfig() {
   const fetchTrigger = async () => {
     if (!publicKey || !program) return;
     setLoading(true);
+    setTrigger(null);
     try {
       const pda = deriveTriggerPda(publicKey);
       const data = await (program.account as any).triggerConfig.fetch(pda);

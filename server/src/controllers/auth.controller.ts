@@ -8,6 +8,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change_this_in_production";
 const JWT_EXPIRY = "24h";
+const IS_PROD = process.env.NODE_ENV === "production";
 
 interface NonceData {
   nonce: string;
@@ -103,7 +104,17 @@ export const verifySignature = asyncHandler(
       nonces.delete(wallet);
 
       const token = jwt.sign({ wallet }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      res.json(new ApiResponse(true, { token, wallet, expiresIn: JWT_EXPIRY }));
+
+      // Set as HttpOnly cookie — never readable by JS
+      res.cookie("aegis_token", token, {
+        httpOnly: true,
+        secure: IS_PROD, // HTTPS only in production
+        sameSite: IS_PROD ? "strict" : "lax",
+        maxAge: 24 * 60 * 60 * 1000, // 24h in ms
+        path: "/",
+      });
+
+      res.json(new ApiResponse(true, { wallet, expiresIn: JWT_EXPIRY }));
     } catch (err: any) {
       res
         .status(401)
@@ -117,3 +128,8 @@ export const verifySignature = asyncHandler(
     }
   },
 );
+
+export const logout = asyncHandler(async (_req: Request, res: Response) => {
+  res.clearCookie("aegis_token", { path: "/" });
+  res.json(new ApiResponse(true, { message: "Logged out" }));
+});

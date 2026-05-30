@@ -182,13 +182,17 @@ pub fn handler(
     let marginfi_util_bps = read_marginfi_utilization(&ctx.remaining_accounts[0])?;
     let kamino_util_bps = read_kamino_utilization(&ctx.remaining_accounts[1])?;
 
+    let current = ctx.accounts.user_vault.current_protocol.clone();
+
     match mode {
         TriggerMode::Defense => {
             require!(trigger.defense_active, AegisError::TriggerNotActive);
-            require!(
-                marginfi_util_bps > trigger.defense_threshold_bps || kamino_util_bps > trigger.defense_threshold_bps,
-                AegisError::ConditionNotMet
-            );
+            let condition_met = match current {
+                Protocol::MarginFi => marginfi_util_bps > trigger.defense_threshold_bps,
+                Protocol::Kamino => kamino_util_bps > trigger.defense_threshold_bps,
+                Protocol::Idle => false,
+            };
+            require!(condition_met, AegisError::ConditionNotMet);
         }
         TriggerMode::Offense => {
             require!(trigger.offense_active, AegisError::TriggerNotActive);
@@ -200,8 +204,6 @@ pub fn handler(
             require!(diff > trigger.offense_threshold_bps, AegisError::ConditionNotMet);
         }
     }
-
-    let current = ctx.accounts.user_vault.current_protocol.clone();
 
     let (from_protocol, to_protocol) = match mode {
         TriggerMode::Defense => {
@@ -238,6 +240,9 @@ pub fn handler(
     let vault_seeds: &[&[u8]] = &[b"vault", owner_key.as_ref(), &[vault_bump]];
     let signer_seeds: &[&[&[u8]]] = &[vault_seeds];
 
+    let mut yield_earned = 0;
+    let mut final_amount = amount;
+
     // Full CPI path: remaining_accounts must include vault_pda at [2] and
     // vault_token_account at [3], followed by protocol-specific accounts.
     // Passing only 2 remaining accounts skips CPIs (used in routing-only tests).
@@ -250,6 +255,8 @@ pub fn handler(
         // but sourced from remaining_accounts to share the same lifetime.
         let vault_pda_info = &ctx.remaining_accounts[2];
         let vault_token_info = &ctx.remaining_accounts[3];
+
+        let balance_before = ctx.accounts.vault_token_account.amount;
 
         match (&from_protocol, &to_protocol) {
             (Protocol::Idle, Protocol::MarginFi) => {
@@ -278,11 +285,16 @@ pub fn handler(
                     amount,
                     signer_seeds,
                 )?;
+                ctx.accounts.vault_token_account.reload()?;
+                let withdrawn = ctx.accounts.vault_token_account.amount.saturating_sub(balance_before);
+                yield_earned = withdrawn.saturating_sub(amount);
+                final_amount = withdrawn;
+
                 kamino_deposit(
                     &ctx.remaining_accounts[12..25],
                     vault_pda_info,
                     vault_token_info,
-                    amount,
+                    final_amount,
                     signer_seeds,
                 )?;
             }
@@ -294,11 +306,16 @@ pub fn handler(
                     amount,
                     signer_seeds,
                 )?;
+                ctx.accounts.vault_token_account.reload()?;
+                let withdrawn = ctx.accounts.vault_token_account.amount.saturating_sub(balance_before);
+                yield_earned = withdrawn.saturating_sub(amount);
+                final_amount = withdrawn;
+
                 marginfi_deposit(
                     &ctx.remaining_accounts[17..24],
                     vault_pda_info,
                     vault_token_info,
-                    amount,
+                    final_amount,
                     signer_seeds,
                 )?;
             }
@@ -310,6 +327,10 @@ pub fn handler(
                     amount,
                     signer_seeds,
                 )?;
+                ctx.accounts.vault_token_account.reload()?;
+                let withdrawn = ctx.accounts.vault_token_account.amount.saturating_sub(balance_before);
+                yield_earned = withdrawn.saturating_sub(amount);
+                final_amount = withdrawn;
             }
             (Protocol::Kamino, Protocol::Idle) => {
                 kamino_withdraw(
@@ -319,13 +340,61 @@ pub fn handler(
                     amount,
                     signer_seeds,
                 )?;
+                ctx.accounts.vault_token_account.reload()?;
+                let withdrawn = ctx.accounts.vault_token_account.amount.saturating_sub(balance_before);
+                yield_earned = withdrawn.saturating_sub(amount);
+                final_amount = withdrawn;
             }
             _ => return err!(AegisError::NoDeployedFunds),
         }
     }
 
-    // Update vault state to reflect new protocol
+    #[cfg(feature = "mock-cpi")]
+    {
+        if from_protocol != Protocol::Idle {
+            let current_time = Clock::get()?.unix_timestamp;
+            let deposit_ts = ctx.accounts.user_vault.deposit_timestamp;
+            // Clamp elapsed to at least 1 second so new wallets get a tiny seed yield
+            let elapsed_secs = if deposit_ts == 0 {
+                1u64
+            } else {
+                (current_time.saturating_sub(deposit_ts)).max(1) as u64
+            };
+
+            // APY curve: mirrors the frontend ProtocolCard curve
+            // 0–80% util → 0–500 bps APY (0–5%)
+            // 80–100% util → 500–2000 bps APY (5–20%)
+            let util_bps = match &from_protocol {
+                Protocol::MarginFi => marginfi_util_bps,
+                Protocol::Kamino  => kamino_util_bps,
+                Protocol::Idle    => 0,
+            };
+            let apy_bps: u64 = if util_bps <= 8000 {
+                util_bps.saturating_mul(500) / 8000
+            } else {
+                500u64.saturating_add(
+                    util_bps.saturating_sub(8000).saturating_mul(1500) / 2000
+                )
+            };
+
+            // yield = principal * apy_bps * elapsed_secs / (10000 * 31_536_000)
+            let mock_yield = (amount as u128)
+                .saturating_mul(apy_bps as u128)
+                .saturating_mul(elapsed_secs as u128)
+                / (10000u128.saturating_mul(31_536_000u128));
+
+            yield_earned = mock_yield as u64;
+            final_amount = amount.saturating_add(yield_earned);
+        }
+    }
+
+    // Reset deposit_timestamp to now for the next hop's time-window
+    ctx.accounts.user_vault.deposit_timestamp = Clock::get()?.unix_timestamp;
+
+    // Update vault state to reflect new protocol and compounded amount
     ctx.accounts.user_vault.current_protocol = to_protocol.clone();
+    ctx.accounts.user_vault.usdc_deposited = final_amount;
+    ctx.accounts.user_vault.lifetime_yield = ctx.accounts.user_vault.lifetime_yield.saturating_add(yield_earned);
 
     // Write trigger execution log
     let clock = Clock::get()?;
@@ -335,9 +404,10 @@ pub fn handler(
     log.mode = mode.clone();
     log.from_protocol = from_protocol;
     log.to_protocol = to_protocol;
-    log.amount_moved = amount;
+    log.amount_moved = final_amount;
     log.marginfi_utilization_bps = marginfi_util_bps;
     log.kamino_utilization_bps = kamino_util_bps;
+    log.yield_earned = yield_earned;
     log.bump = ctx.bumps.trigger_log;
 
     // Increment trigger execution counter

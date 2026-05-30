@@ -1,5 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useEffect, useRef } from "react";
+import { useAuth } from "../../hooks/useAuth";
 
 const links = [
   { to: "/", label: "Dashboard" },
@@ -10,6 +13,28 @@ const links = [
 
 export default function Navbar() {
   const { pathname } = useLocation();
+  const { publicKey } = useWallet();
+  const { authed, checking, login, logout } = useAuth();
+  const prevKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = publicKey?.toBase58() ?? null;
+
+    // Wait until the cookie validity check resolves before acting
+    if (checking) return;
+
+    if (key && key !== prevKey.current && !authed) {
+      // Wallet just connected — sign-in automatically
+      login();
+    }
+
+    if (!key && prevKey.current) {
+      // Wallet disconnected — clear cookie
+      logout();
+    }
+
+    prevKey.current = key;
+  }, [publicKey, authed, login, logout]);
 
   return (
     <nav className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-50">

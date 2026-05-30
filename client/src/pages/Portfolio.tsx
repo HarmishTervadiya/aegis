@@ -1,4 +1,5 @@
 import { useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
 import { useUserVault } from "../hooks/useUserVault";
 import { useTriggerConfig } from "../hooks/useTriggerConfig";
 import { useAegisProgram } from "../hooks/useAegisProgram";
@@ -112,38 +113,55 @@ export default function Portfolio() {
             <div className="flex justify-between items-center">
               <span className="text-secondary text-sm">Status</span>
               <div className="flex items-center gap-2">
-                <StatusDot status={trigger.isActive ? "safe" : "idle"} />
+                <StatusDot
+                  status={
+                    trigger.defenseActive || trigger.offenseActive
+                      ? "safe"
+                      : "idle"
+                  }
+                />
                 <span className="text-primary text-sm">
-                  {trigger.isActive ? "Active" : "Inactive"}
+                  {trigger.defenseActive || trigger.offenseActive
+                    ? "Active"
+                    : "Inactive"}
                 </span>
               </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-secondary text-sm">Mode</span>
-              <span className="text-primary text-sm">
-                {trigger.mode.defense ? "Defense" : "Offense"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-secondary text-sm">Threshold</span>
-              <span className="font-mono text-primary text-sm">
-                {trigger.mode.defense
-                  ? formatBps(trigger.defenseThresholdBps.toNumber())
-                  : formatBps(trigger.offenseThresholdBps.toNumber())}
-              </span>
-            </div>
+
+            {trigger.defenseActive && (
+              <div className="flex justify-between">
+                <span className="text-secondary text-sm">
+                  Defense Threshold
+                </span>
+                <span className="font-mono text-primary text-sm">
+                  {formatBps(trigger.defenseThresholdBps.toNumber())}
+                </span>
+              </div>
+            )}
+
+            {trigger.offenseActive && (
+              <div className="flex justify-between">
+                <span className="text-secondary text-sm">
+                  Offense Threshold
+                </span>
+                <span className="font-mono text-primary text-sm">
+                  {formatBps(trigger.offenseThresholdBps.toNumber())}
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between">
               <span className="text-secondary text-sm">Times fired</span>
               <span className="font-mono text-primary text-sm">
                 {trigger.executionCount.toNumber()}
               </span>
             </div>
-            {trigger.isActive && (
+            {(trigger.defenseActive || trigger.offenseActive) && (
               <TxButton
                 onClick={handleCancelTrigger}
                 className="mt-2 bg-surface border border-border text-secondary hover:text-primary hover:border-muted"
               >
-                Cancel Trigger
+                Cancel All Triggers
               </TxButton>
             )}
           </div>
@@ -153,7 +171,7 @@ export default function Portfolio() {
       </div>
 
       {/* Withdraw */}
-      {vault && !trigger?.isActive && (
+      {vault && !(trigger?.defenseActive || trigger?.offenseActive) && (
         <div className="bg-surface border border-border rounded-xl p-5">
           <h2 className="text-sm font-medium text-secondary mb-4">Withdraw</h2>
           <TxButton onClick={handleWithdraw}>Withdraw all USDC</TxButton>

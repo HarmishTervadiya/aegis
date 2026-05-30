@@ -13,16 +13,20 @@ export const requireAuth = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const authHeader = req.headers.authorization;
+  // Prefer HttpOnly cookie; fall back to Bearer header for server-side tools
+  const cookieToken = (req as any).cookies?.aegis_token;
+  const headerToken = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice(7)
+    : null;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const token = cookieToken || headerToken;
+
+  if (!token) {
     res
       .status(401)
-      .json(new ApiResponse(false, null, "Authorization header required"));
+      .json(new ApiResponse(false, null, "Authorization required"));
     return;
   }
-
-  const token = authHeader.slice(7);
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { wallet: string };

@@ -58,10 +58,8 @@ export default function Deposit() {
   };
 
   const [amount, setAmount] = useState("");
-  const [mode, setMode] = useState<"Defense" | "Offense">("Defense");
   const [defThresh, setDefThresh] = useState("9000");
   const [offThresh, setOffThresh] = useState("200");
-  const [showTriggerForm, setShowTriggerForm] = useState(false);
 
   const vaultExists = !!vault;
 
@@ -110,18 +108,19 @@ export default function Deposit() {
     return tx;
   };
 
-  const handleSetTrigger = async (): Promise<string> => {
+  const handleSetTrigger = async (
+    targetMode: "Defense" | "Offense",
+    isActive: boolean,
+  ): Promise<string> => {
     if (!publicKey || !program) throw new Error("Wallet not connected");
     const vaultPda = deriveVaultPda(publicKey);
     const triggerPda = deriveTriggerPda(publicKey);
-    const modeArg = mode === "Defense" ? { defense: {} } : { offense: {} };
+    const modeArg =
+      targetMode === "Defense" ? { defense: {} } : { offense: {} };
+    const thresh = targetMode === "Defense" ? defThresh : offThresh;
 
     const tx = await program.methods
-      .setTrigger(
-        modeArg as any,
-        new BN(parseInt(defThresh)),
-        new BN(parseInt(offThresh)),
-      )
+      .setTrigger(modeArg as any, isActive, new BN(parseInt(thresh)))
       .accounts({
         triggerConfig: triggerPda,
         userVault: vaultPda,
@@ -132,7 +131,6 @@ export default function Deposit() {
 
     setTimeout(() => {
       refreshTrigger();
-      setShowTriggerForm(false);
     }, 1000);
     return tx;
   };
@@ -157,11 +155,11 @@ export default function Deposit() {
     if (vault.currentProtocol.idle !== undefined) currentProtocolStr = "Idle";
   }
 
-  // Derive active trigger status
-  let activeTriggerMode = null;
-  if (trigger?.mode) {
-    if (trigger.mode.defense !== undefined) activeTriggerMode = "Defense";
-    if (trigger.mode.offense !== undefined) activeTriggerMode = "Offense";
+  let defActive = false;
+  let offActive = false;
+  if (trigger) {
+    defActive = trigger.defenseActive;
+    offActive = trigger.offenseActive;
   }
 
   return (
@@ -246,111 +244,101 @@ export default function Deposit() {
                   Protect and optimize your yield
                 </p>
               </div>
-              {trigger && !showTriggerForm && (
-                <button
-                  onClick={() => setShowTriggerForm(true)}
-                  className="btn btn-sm btn-outline text-secondary"
-                >
-                  Update Trigger
-                </button>
-              )}
             </div>
 
-            {trigger && !showTriggerForm ? (
-              <div className="bg-bg rounded-lg p-4 border border-border flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span className="font-medium text-sm">
-                      Active Trigger: {activeTriggerMode} Mode
-                    </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Defense Trigger Box */}
+              <div className="bg-bg rounded-lg p-4 border border-border">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-sm">Defense Mode</h3>
+                  <div
+                    className={`text-xs px-2 py-1 rounded-full ${defActive ? "bg-green-500/20 text-green-500" : "bg-muted/20 text-muted"}`}
+                  >
+                    {defActive ? "Active" : "Inactive"}
                   </div>
-                  <p className="text-xs text-muted">
-                    {activeTriggerMode === "Defense"
-                      ? `Moves funds to Idle when MarginFi utilization > ${(trigger.defenseThresholdBps.toNumber() / 100).toFixed(2)}%`
-                      : `Moves funds to best yield when APY gap > ${(trigger.offenseThresholdBps.toNumber() / 100).toFixed(2)}%`}
+                </div>
+                <p className="text-xs text-muted mb-4">
+                  Pull funds to Idle when risk is high.
+                </p>
+                <div className="mb-4">
+                  <label className="text-xs text-secondary block mb-1">
+                    Threshold (bps)
+                  </label>
+                  <input
+                    type="number"
+                    value={defThresh}
+                    onChange={(e) => setDefThresh(e.target.value)}
+                    placeholder="9000"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-primary font-mono text-xs focus:outline-none focus:border-purple/50"
+                  />
+                  <p className="text-[10px] text-muted mt-1">
+                    Fires when util &gt;{" "}
+                    {(parseInt(defThresh || "0") / 100).toFixed(2)}%
                   </p>
                 </div>
+                {defActive ? (
+                  <TxButton
+                    onClick={() => handleSetTrigger("Defense", false)}
+                    className="w-full btn-outline border-border text-secondary text-xs"
+                  >
+                    Deactivate Defense
+                  </TxButton>
+                ) : (
+                  <TxButton
+                    onClick={() => handleSetTrigger("Defense", true)}
+                    className="w-full text-xs"
+                  >
+                    Activate Defense
+                  </TxButton>
+                )}
               </div>
-            ) : (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-5 text-sm text-primary">
-                  <span className="font-semibold">Note:</span> You can only have
-                  one active trigger configuration at a time. Setting a new one
-                  will override the previous.
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {(["Defense", "Offense"] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMode(m)}
-                      className={`p-4 rounded-lg border text-left transition-all ${mode === m ? "border-purple bg-purple/10 text-primary" : "border-border text-secondary hover:border-muted"}`}
-                    >
-                      <p className="font-medium text-sm">{m} Mode</p>
-                      <p className="text-xs text-muted mt-1">
-                        {m === "Defense"
-                          ? "Move funds when utilization is too high"
-                          : "Move funds to the higher yielding protocol"}
-                      </p>
-                    </button>
-                  ))}
+              {/* Offense Trigger Box */}
+              <div className="bg-bg rounded-lg p-4 border border-border">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-sm">Offense Mode</h3>
+                  <div
+                    className={`text-xs px-2 py-1 rounded-full ${offActive ? "bg-purple/20 text-purple" : "bg-muted/20 text-muted"}`}
+                  >
+                    {offActive ? "Active" : "Inactive"}
+                  </div>
                 </div>
-
-                <div className="flex flex-col gap-3 mb-5">
-                  {mode === "Defense" && (
-                    <div>
-                      <label className="text-xs text-secondary block mb-1">
-                        Defense threshold (basis points)
-                      </label>
-                      <input
-                        type="number"
-                        value={defThresh}
-                        onChange={(e) => setDefThresh(e.target.value)}
-                        placeholder="9000"
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-primary font-mono text-sm focus:outline-none focus:border-purple/50"
-                      />
-                      <p className="text-xs text-muted mt-1">
-                        {defThresh
-                          ? `Trigger fires when utilization exceeds ${(parseInt(defThresh) / 100).toFixed(2)}%`
-                          : ""}
-                      </p>
-                    </div>
-                  )}
-                  {mode === "Offense" && (
-                    <div>
-                      <label className="text-xs text-secondary block mb-1">
-                        Offense threshold (basis points)
-                      </label>
-                      <input
-                        type="number"
-                        value={offThresh}
-                        onChange={(e) => setOffThresh(e.target.value)}
-                        placeholder="200"
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-primary font-mono text-sm focus:outline-none focus:border-purple/50"
-                      />
-                      <p className="text-xs text-muted mt-1">
-                        {offThresh
-                          ? `Trigger fires when APY difference exceeds ${(parseInt(offThresh) / 100).toFixed(2)}%`
-                          : ""}
-                      </p>
-                    </div>
-                  )}
+                <p className="text-xs text-muted mb-4">
+                  Chase yield across protocols.
+                </p>
+                <div className="mb-4">
+                  <label className="text-xs text-secondary block mb-1">
+                    Yield Gap (bps)
+                  </label>
+                  <input
+                    type="number"
+                    value={offThresh}
+                    onChange={(e) => setOffThresh(e.target.value)}
+                    placeholder="200"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-primary font-mono text-xs focus:outline-none focus:border-purple/50"
+                  />
+                  <p className="text-[10px] text-muted mt-1">
+                    Fires when gap &gt;{" "}
+                    {(parseInt(offThresh || "0") / 100).toFixed(2)}%
+                  </p>
                 </div>
-
-                <div className="flex gap-2">
-                  <TxButton onClick={handleSetTrigger}>Arm Trigger</TxButton>
-                  {trigger && (
-                    <button
-                      onClick={() => setShowTriggerForm(false)}
-                      className="btn btn-outline text-secondary border-border"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
+                {offActive ? (
+                  <TxButton
+                    onClick={() => handleSetTrigger("Offense", false)}
+                    className="w-full btn-outline border-border text-secondary text-xs"
+                  >
+                    Deactivate Offense
+                  </TxButton>
+                ) : (
+                  <TxButton
+                    onClick={() => handleSetTrigger("Offense", true)}
+                    className="w-full text-xs"
+                  >
+                    Activate Offense
+                  </TxButton>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -365,7 +353,7 @@ export default function Deposit() {
               className={`w-32 h-32 rounded-full flex items-center justify-center mb-6 shadow-inner ${currentProtocolStr === "Idle" ? "bg-base-200" : "bg-primary/10"}`}
             >
               <div
-                className={`w-24 h-24 rounded-full flex items-center justify-center shadow-lg ${currentProtocolStr === "Idle" ? "bg-base-300 text-muted" : "bg-primary text-primary-content"}`}
+                className={`w-24 h-24 rounded-full text-surface flex items-center justify-center shadow-lg ${currentProtocolStr === "Idle" ? "bg-base-300 text-muted" : "bg-primary text-primary-content"}`}
               >
                 {currentProtocolStr === "MarginFi" && (
                   <span className="font-bold text-xl">MarginFi</span>
