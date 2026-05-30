@@ -117,7 +117,7 @@ export default function Deposit() {
     try {
       toast.loading("Minting 1,000,000 Mock USDC...", { id: "mint-usdc" });
       await api.post("/api/mint-usdc", { address: publicKey.toBase58() });
-      toast.success("Minted Mock USDC! You can now deposit.", {
+      toast.success("Minted 1,000,000 Mock USDC! You can now deposit.", {
         id: "mint-usdc",
       });
     } catch (err: any) {
@@ -158,6 +158,8 @@ export default function Deposit() {
       .rpc();
 
     setTimeout(refreshVault, 1000);
+    setTimeout(refreshVault, 3000);
+    setTimeout(refreshVault, 5000);
     return tx;
   };
 
@@ -182,6 +184,8 @@ export default function Deposit() {
       .rpc();
 
     setTimeout(refreshVault, 1000);
+    setTimeout(refreshVault, 3000);
+    setTimeout(refreshVault, 5000);
     return tx;
   };
 
@@ -206,9 +210,9 @@ export default function Deposit() {
       })
       .rpc();
 
-    setTimeout(() => {
-      refreshTrigger();
-    }, 1000);
+    setTimeout(refreshTrigger, 1000);
+    setTimeout(refreshTrigger, 3000);
+    setTimeout(refreshTrigger, 5000);
     return tx;
   };
 

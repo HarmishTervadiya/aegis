@@ -61,24 +61,32 @@ app.use("/api", systemRoutes);
 
 app.use(errorHandler);
 
-// Cron jobs
 async function start() {
   logger.info("Aegis backend starting...");
 
-  // Initial poll on startup so API is immediately populated
-  await initProtocolIndexer();
-  await initTriggerIndexer();
-  await initVaultIndexer();
-
+  // Bind the port FIRST so Render's health check succeeds immediately
   app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT}`);
     logger.info(`Polling every ${POLL}s`);
-    logger.info(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
-    logger.info(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
-    prisma.triggerConfig.count().then((count) => {
-      logger.info(`Active triggers: ${count}`);
-    });
   });
+
+  // Then initialize indexers in background (non-blocking)
+  initProtocolIndexer()
+    .then(() => {
+      logger.info(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
+      logger.info(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
+    })
+    .catch((err) => logger.error("Protocol indexer failed:", err));
+
+  initTriggerIndexer()
+    .then(() => {
+      prisma.triggerConfig.count().then((count) => {
+        logger.info(`Active triggers: ${count}`);
+      });
+    })
+    .catch((err) => logger.error("Trigger indexer failed:", err));
+
+  initVaultIndexer().catch((err) => logger.error("Vault indexer failed:", err));
 }
 
 start().catch((err) => {

@@ -183,7 +183,7 @@ export const postMintUsdc = asyncHandler(
         mint,
         tokenAccount.address,
         crankKeypair,
-        1000000
+        1_000_000_000_000 // 1,000,000 USDC (6 decimals)
       );
 
       logger.info(`[Mint USDC Success]: ${signature}`);
