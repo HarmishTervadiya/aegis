@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import type { Request, Response } from "express";
 import { exec } from "child_process";
 import { PublicKey } from "@solana/web3.js";
@@ -140,19 +141,19 @@ export const postMintUsdc = asyncHandler(
       winPath.slice(2).replace(/\\/g, "/");
     const keypairPath = `${wslPath}/deploy-key.json`;
 
-    console.log(`[Mint USDC] Minting ${mint} to ${address} on ${network}`);
+    logger.info(`[Mint USDC] Minting ${mint} to ${address} on ${network}`);
 
     exec(
       `wsl -e bash -lc "spl-token create-account ${mint} --owner ${address} --fee-payer ${keypairPath} --url ${network} || true; spl-token mint ${mint} 1000000 --recipient-owner ${address} --fee-payer ${keypairPath} --mint-authority ${keypairPath} --url ${network}"`,
       (err, stdout, stderr) => {
         if (err) {
-          console.error("[Mint USDC Error]:", err, stderr);
+          logger.error("[Mint USDC Error]:", err, stderr);
           res
             .status(500)
             .json(new ApiResponse(false, null, "Mint failed: " + stderr));
           return;
         }
-        console.log(`[Mint USDC Success]: ${stdout}`);
+        logger.info(`[Mint USDC Success]: ${stdout}`);
         res.json(new ApiResponse(true, null, "Mint successful"));
       },
     );

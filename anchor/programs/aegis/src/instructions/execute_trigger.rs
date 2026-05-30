@@ -140,14 +140,27 @@ pub struct ExecuteTrigger<'info> {
     // See module-level doc comment for remaining_accounts layout
 }
 
-pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
-    let trigger = &ctx.accounts.trigger_config;
+pub fn handler(
+    ctx: Context<ExecuteTrigger>,
+    execution_count: u64,
+    mode: TriggerMode,
+) -> Result<()> {
+    let trigger = &mut ctx.accounts.trigger_config;
 
-    require!(trigger.is_active, AegisError::TriggerNotActive);
     require!(
-        log_index == trigger.execution_count,
+        trigger.execution_count == execution_count,
         AegisError::InvalidAccountData
     );
+
+    // Enforce cooldown if it's not the first execution
+    if trigger.execution_count > 0 {
+        let current_time = Clock::get()?.unix_timestamp;
+        require!(
+            current_time - trigger.last_executed >= 15,
+            AegisError::CooldownActive
+        );
+    }
+
     require!(
         ctx.remaining_accounts.len() >= 2,
         AegisError::InvalidAccountData
@@ -169,29 +182,28 @@ pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
     let marginfi_util_bps = read_marginfi_utilization(&ctx.remaining_accounts[0])?;
     let kamino_util_bps = read_kamino_utilization(&ctx.remaining_accounts[1])?;
 
-    let defense_threshold = trigger.defense_threshold_bps;
-    let offense_threshold = trigger.offense_threshold_bps;
-
-    match trigger.mode {
+    match mode {
         TriggerMode::Defense => {
+            require!(trigger.defense_active, AegisError::TriggerNotActive);
             require!(
-                marginfi_util_bps > defense_threshold,
+                marginfi_util_bps > trigger.defense_threshold_bps || kamino_util_bps > trigger.defense_threshold_bps,
                 AegisError::ConditionNotMet
             );
         }
         TriggerMode::Offense => {
+            require!(trigger.offense_active, AegisError::TriggerNotActive);
             let diff = if kamino_util_bps > marginfi_util_bps {
                 kamino_util_bps.saturating_sub(marginfi_util_bps)
             } else {
                 marginfi_util_bps.saturating_sub(kamino_util_bps)
             };
-            require!(diff > offense_threshold, AegisError::ConditionNotMet);
+            require!(diff > trigger.offense_threshold_bps, AegisError::ConditionNotMet);
         }
     }
 
     let current = ctx.accounts.user_vault.current_protocol.clone();
 
-    let (from_protocol, to_protocol) = match trigger.mode {
+    let (from_protocol, to_protocol) = match mode {
         TriggerMode::Defense => {
             require!(
                 current != Protocol::Idle,
@@ -320,7 +332,7 @@ pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
     let log = &mut ctx.accounts.trigger_log;
     log.owner = ctx.accounts.owner.key();
     log.executed_at = clock.unix_timestamp;
-    log.mode = trigger.mode.clone();
+    log.mode = mode.clone();
     log.from_protocol = from_protocol;
     log.to_protocol = to_protocol;
     log.amount_moved = amount;
@@ -338,7 +350,7 @@ pub fn handler(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
 
     msg!(
         "Aegis: trigger fired. mode={:?} marginfi={}bps kamino={}bps amount={} from={:?} to={:?}",
-        trigger_mut.mode,
+        mode,
         marginfi_util_bps,
         kamino_util_bps,
         amount,

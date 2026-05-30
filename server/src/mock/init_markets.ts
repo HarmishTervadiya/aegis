@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import { execSync } from "child_process";
@@ -12,7 +13,7 @@ const IDL_PATH = path.resolve(
 );
 
 async function main() {
-  console.log("Starting init_markets...");
+  logger.info("Starting init_markets...");
 
   // 1. Get devnet connection
   const connection = new Connection(
@@ -31,14 +32,14 @@ async function main() {
       JSON.parse(fs.readFileSync(keypairPath, "utf8")),
     );
   } catch (e) {
-    console.error("Failed to load deployer key from", keypairPath);
+    logger.error("Failed to load deployer key from", keypairPath);
     process.exit(1);
   }
   const wallet = new Wallet(Keypair.fromSecretKey(secretKey));
-  console.log("Deployer:", wallet.publicKey.toBase58());
+  logger.info("Deployer:", wallet.publicKey.toBase58());
 
   // 3. Create Mock USDC Mint using CLI
-  console.log("Creating Mock USDC Mint on Devnet...");
+  logger.info("Creating Mock USDC Mint on Devnet...");
   let usdcMint;
   try {
     const output = execSync(
@@ -49,9 +50,9 @@ async function main() {
     if (!match)
       throw new Error("Could not parse token address from output: " + output);
     usdcMint = match[1];
-    console.log("Mock USDC Mint:", usdcMint);
+    logger.info("Mock USDC Mint:", usdcMint);
   } catch (e) {
-    console.error("Failed to create mint:", e);
+    logger.error("Failed to create mint:", e);
     process.exit(1);
   }
 
@@ -62,7 +63,7 @@ async function main() {
 
   const idl = JSON.parse(fs.readFileSync(IDL_PATH, "utf8"));
   const programId = new PublicKey(idl.address);
-  console.log("Mock Program ID:", programId.toBase58());
+  logger.info("Mock Program ID:", programId.toBase58());
 
   const program = new Program(idl, provider);
 
@@ -77,7 +78,7 @@ async function main() {
       programId,
     );
 
-    console.log(`Initializing ${labelString} Market: ${marketPda.toBase58()}`);
+    logger.info(`Initializing ${labelString} Market: ${marketPda.toBase58()}`);
 
     try {
       const tx = await program.methods
@@ -93,9 +94,9 @@ async function main() {
           authority: wallet.publicKey,
         })
         .rpc();
-      console.log(`- Success! Tx: ${tx}`);
+      logger.info(`- Success! Tx: ${tx}`);
     } catch (e) {
-      console.error(`- Failed:`, e);
+      logger.error(`- Failed:`, e);
     }
     return marketPda;
   };
@@ -127,10 +128,10 @@ async function main() {
   updateEnv("USDC_MINT", usdcMint);
 
   fs.writeFileSync(envPath, envContent.trim() + "\n");
-  console.log(".env updated with Mock Market PDAs.");
+  logger.info(".env updated with Mock Market PDAs.");
 
-  console.log("\n--- DONE ---");
-  console.log("Run the server with MOCK_MODE=true to start fluctuation.");
+  logger.info("\n--- DONE ---");
+  logger.info("Run the server with MOCK_MODE=true to start fluctuation.");
 }
 
-main().catch(console.error);
+main().catch(logger.error);

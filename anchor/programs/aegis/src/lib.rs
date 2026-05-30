@@ -25,18 +25,18 @@ pub mod aegis {
     pub fn set_trigger(
         ctx: Context<SetTrigger>,
         mode: TriggerMode,
-        defense_threshold_bps: u64,
-        offense_threshold_bps: u64,
+        is_active: bool,
+        threshold_bps: u64,
     ) -> Result<()> {
-        instructions::set_trigger::handler(ctx, mode, defense_threshold_bps, offense_threshold_bps)
+        instructions::set_trigger::handler(ctx, mode, is_active, threshold_bps)
     }
 
     pub fn cancel_trigger(ctx: Context<CancelTrigger>) -> Result<()> {
         instructions::cancel_trigger::handler(ctx)
     }
 
-    pub fn execute_trigger(ctx: Context<ExecuteTrigger>, log_index: u64) -> Result<()> {
-        instructions::execute_trigger::handler(ctx, log_index)
+    pub fn execute_trigger(ctx: Context<ExecuteTrigger>, execution_count: u64, mode: TriggerMode) -> Result<()> {
+        instructions::execute_trigger::handler(ctx, execution_count, mode)
     }
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {

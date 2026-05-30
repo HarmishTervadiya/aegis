@@ -15,6 +15,7 @@ pub struct CancelTrigger<'info> {
 }
 
 pub fn handler(ctx: Context<CancelTrigger>) -> Result<()> {
-    ctx.accounts.trigger_config.is_active = false;
+    ctx.accounts.trigger_config.defense_active = false;
+    ctx.accounts.trigger_config.offense_active = false;
     Ok(())
 }

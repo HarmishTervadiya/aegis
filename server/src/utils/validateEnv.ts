@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 const REQUIRED_ENV = [
   "RPC_URL",
   "PROGRAM_ID",
@@ -9,7 +10,7 @@ const REQUIRED_ENV = [
 export function validateEnv() {
   const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
   if (missing.length > 0) {
-    console.error(`Missing required env vars: ${missing.join(", ")}`);
+    logger.error(`Missing required env vars: ${missing.join(", ")}`);
     process.exit(1);
   }
 }

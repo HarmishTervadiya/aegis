@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { program, crankKeypair } from "../rpc.js";
@@ -24,10 +25,14 @@ export function classifyError(err: any): string | null {
   return null;
 }
 
-export async function fireExecuteTrigger(trigger: CachedTrigger) {
+export async function fireExecuteTrigger(task: {
+  trigger: CachedTrigger;
+  modeArgs: any;
+}) {
+  const { trigger, modeArgs } = task;
   const key = trigger.owner.toString();
   if (inFlight.has(key)) {
-    console.log(`Executor: skipping ${key.slice(0, 8)} — tx already in flight`);
+    logger.info(`Executor: skipping ${key.slice(0, 8)} — tx already in flight`);
     return { success: false, reason: "AlreadyInFlight" };
   }
 
@@ -58,7 +63,7 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
 
     // Build the transaction
     const txSig = await (program.methods as any)
-      .executeTrigger(new anchor.BN(trigger.executionCount))
+      .executeTrigger(new anchor.BN(trigger.executionCount), modeArgs)
       .accounts({
         triggerConfig: trigger.triggerPda,
         userVault: vaultPda,
@@ -75,12 +80,12 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
       .signers([crankKeypair])
       .rpc();
 
-    console.log(`Executor: Fired trigger for ${key.slice(0, 8)}! Tx: ${txSig}`);
+    logger.info(`Executor: Fired trigger for ${key.slice(0, 8)}! Tx: ${txSig}`);
 
     // Add to recent executions cache
     cache.recentExecutions.unshift({
       owner: key,
-      mode: formatMode(trigger.mode),
+      mode: formatMode(modeArgs),
       marginfiUtil: cache.marginfi.utilizationBps,
       kaminoUtil: cache.kamino.utilizationBps,
       firedAt: new Date().toISOString(),
@@ -95,11 +100,11 @@ export async function fireExecuteTrigger(trigger: CachedTrigger) {
   } catch (err: any) {
     const explanation = classifyError(err);
     if (explanation) {
-      console.log(
+      logger.info(
         `Executor: expected failure for ${key.slice(0, 8)} — ${explanation}`,
       );
     } else {
-      console.error(`Executor: execution failed for ${key.slice(0, 8)}`, err);
+      logger.error(`Executor: execution failed for ${key.slice(0, 8)}`, err);
     }
     return { success: false, error: err.message };
   } finally {

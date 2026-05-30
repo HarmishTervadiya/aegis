@@ -7,7 +7,8 @@ export function formatMode(mode: any): "Defense" | "Offense" | "Unknown" {
 export function serializeTrigger(trigger: any) {
   return {
     owner: trigger.owner.toString(),
-    mode: formatMode(trigger.mode),
+    defenseActive: trigger.defenseActive,
+    offenseActive: trigger.offenseActive,
     defenseThresholdBps: trigger.defenseThresholdBps,
     offenseThresholdBps: trigger.offenseThresholdBps,
     executionCount: trigger.executionCount,

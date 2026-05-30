@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import { PublicKey } from "@solana/web3.js";
 import { connection, program } from "../rpc.js";
 import { cache } from "../cache.js";
@@ -82,7 +83,7 @@ export async function pollProtocolState() {
       cache.marginfi.utilizationPct = utilBps / 100;
       cache.marginfi.updatedAt = new Date().toISOString();
     } else {
-      console.warn("Watcher: MarginFi account unavailable this cycle");
+      logger.warn("Watcher: MarginFi account unavailable this cycle");
     }
 
     if (kam) {
@@ -91,12 +92,12 @@ export async function pollProtocolState() {
       cache.kamino.utilizationPct = utilBps / 100;
       cache.kamino.updatedAt = new Date().toISOString();
     } else {
-      console.warn("Watcher: Kamino account unavailable this cycle");
+      logger.warn("Watcher: Kamino account unavailable this cycle");
     }
 
     cache.lastPollAt = new Date().toISOString();
   } catch (err: any) {
-    console.error("Watcher: poll error:", err.message);
+    logger.error("Watcher: poll error:", err.message);
   }
 }
 
@@ -109,12 +110,12 @@ export async function fetchActiveTriggers() {
 
     for (const t of allTriggers) {
       const acc = t.account;
-      if (acc.isActive) {
+      if (acc.defenseActive || acc.offenseActive) {
         newCache.set(acc.owner.toString(), {
           triggerPda: t.publicKey,
           owner: acc.owner,
-          mode: acc.mode,
-          isActive: acc.isActive,
+          defenseActive: acc.defenseActive,
+          offenseActive: acc.offenseActive,
           defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
           offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
           executionCount: acc.executionCount.toNumber(),
@@ -125,7 +126,7 @@ export async function fetchActiveTriggers() {
 
     cache.activeTriggers = newCache;
   } catch (err: any) {
-    console.error("Watcher: fetch triggers error:", err.message);
+    logger.error("Watcher: fetch triggers error:", err.message);
   }
 }
 
@@ -137,42 +138,47 @@ function isCacheStale(
   return Date.now() - new Date(updatedAt).getTime() > maxAgeMs;
 }
 
-export function evaluateTriggers(): CachedTrigger[] {
+export interface TriggerToFire {
+  trigger: CachedTrigger;
+  modeArgs: any; // e.g. { defense: {} } or { offense: {} }
+}
+
+export function evaluateTriggers(): TriggerToFire[] {
   if (
     isCacheStale(cache.marginfi.updatedAt) ||
     isCacheStale(cache.kamino.updatedAt)
   ) {
-    console.warn("Watcher: cache is stale — skipping trigger evaluation");
+    logger.warn("Watcher: cache is stale — skipping trigger evaluation");
     return [];
   }
 
-  const toFire: CachedTrigger[] = [];
+  const toFire: TriggerToFire[] = [];
   const mfiUtil = cache.marginfi.utilizationBps;
   const kamUtil = cache.kamino.utilizationBps;
 
   for (const trigger of cache.activeTriggers.values()) {
-    if (!trigger.isActive) continue;
+    let firedMode: any = null;
 
-    let shouldFire = false;
-
-    if (trigger.mode.defense) {
-      // In Defense, user wants to move out of a protocol if its util is too HIGH (> defenseThreshold)
+    // Defense takes absolute priority
+    if (trigger.defenseActive) {
       if (
         mfiUtil > trigger.defenseThresholdBps ||
         kamUtil > trigger.defenseThresholdBps
       ) {
-        shouldFire = true;
-      }
-    } else if (trigger.mode.offense) {
-      // In Offense, user wants to move to the protocol with higher utilization if the difference exceeds the threshold
-      const diff = Math.abs(mfiUtil - kamUtil);
-      if (diff > trigger.offenseThresholdBps) {
-        shouldFire = true;
+        firedMode = { defense: {} };
       }
     }
 
-    if (shouldFire) {
-      toFire.push(trigger);
+    // If Defense wasn't triggered, check Offense
+    if (!firedMode && trigger.offenseActive) {
+      const diff = Math.abs(mfiUtil - kamUtil);
+      if (diff > trigger.offenseThresholdBps) {
+        firedMode = { offense: {} };
+      }
+    }
+
+    if (firedMode) {
+      toFire.push({ trigger, modeArgs: firedMode });
     }
   }
 

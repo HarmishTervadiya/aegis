@@ -38,7 +38,7 @@ pub struct Withdraw<'info> {
 
 pub fn handler(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     require!(
-        !ctx.accounts.trigger_config.is_active,
+        !ctx.accounts.trigger_config.defense_active && !ctx.accounts.trigger_config.offense_active,
         AegisError::TriggerStillActive
     );
 

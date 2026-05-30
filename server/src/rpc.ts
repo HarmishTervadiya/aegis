@@ -1,3 +1,4 @@
+import { logger } from "./utils/logger.js";
 import { Connection, Keypair } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import * as fs from "fs";
@@ -28,7 +29,7 @@ let crankKeypairData: number[];
 try {
   crankKeypairData = JSON.parse(fs.readFileSync(keypairPath, "utf8"));
 } catch (err: any) {
-  console.warn(
+  logger.warn(
     `Could not load crank keypair at ${keypairPath}. Using a random keypair for now.`,
   );
   crankKeypairData = Array.from(Keypair.generate().secretKey);

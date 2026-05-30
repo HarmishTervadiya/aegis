@@ -30,25 +30,36 @@ pub struct SetTrigger<'info> {
 pub fn handler(
     ctx: Context<SetTrigger>,
     mode: TriggerMode,
-    defense_threshold_bps: u64,
-    offense_threshold_bps: u64,
+    is_active: bool,
+    threshold_bps: u64,
 ) -> Result<()> {
     require!(
-        defense_threshold_bps > 0 && defense_threshold_bps <= 10000,
-        AegisError::InvalidThreshold
-    );
-    require!(
-        offense_threshold_bps > 0 && offense_threshold_bps <= 10000,
+        threshold_bps > 0 && threshold_bps <= 10000,
         AegisError::InvalidThreshold
     );
 
     let trigger = &mut ctx.accounts.trigger_config;
-    trigger.owner = ctx.accounts.owner.key();
-    trigger.mode = mode;
-    trigger.is_active = true;
-    trigger.defense_threshold_bps = defense_threshold_bps;
-    trigger.offense_threshold_bps = offense_threshold_bps;
-    trigger.bump = ctx.bumps.trigger_config;
+    
+    // Set owner and bump only if it's the first time
+    if trigger.owner == Pubkey::default() {
+        trigger.owner = ctx.accounts.owner.key();
+        trigger.bump = ctx.bumps.trigger_config;
+    }
+
+    match mode {
+        TriggerMode::Defense => {
+            trigger.defense_active = is_active;
+            if is_active {
+                trigger.defense_threshold_bps = threshold_bps;
+            }
+        }
+        TriggerMode::Offense => {
+            trigger.offense_active = is_active;
+            if is_active {
+                trigger.offense_threshold_bps = threshold_bps;
+            }
+        }
+    }
 
     Ok(())
 }

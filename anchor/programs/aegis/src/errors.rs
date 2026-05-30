@@ -32,6 +32,9 @@ pub enum AegisError {
     #[msg("Funds are already in the optimal protocol — no move needed")]
     AlreadyInOptimalProtocol,
 
+    #[msg("Trigger is on cooldown and cannot be executed yet.")]
+    CooldownActive,
+
     #[msg("Threshold must be between 1 and 10000 basis points")]
     InvalidThreshold,
 }

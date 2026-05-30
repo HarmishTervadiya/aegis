@@ -8,8 +8,8 @@ export interface ProtocolHealth {
 export interface CachedTrigger {
   triggerPda: any; // PublicKey
   owner: any; // PublicKey
-  mode: any;
-  isActive: boolean;
+  defenseActive: boolean;
+  offenseActive: boolean;
   defenseThresholdBps: number;
   offenseThresholdBps: number;
   executionCount: number;

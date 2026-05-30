@@ -4,8 +4,8 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct TriggerConfig {
     pub owner: Pubkey,
-    pub mode: TriggerMode,
-    pub is_active: bool,
+    pub defense_active: bool,
+    pub offense_active: bool,
     pub last_executed: i64,
     pub execution_count: u64,
     pub defense_threshold_bps: u64,

@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 export async function withRetry<T>(
   fn: () => Promise<T>,
   maxAttempts: number = 3,
@@ -9,7 +10,7 @@ export async function withRetry<T>(
     } catch (err: any) {
       if (attempt === maxAttempts) throw err;
       const delay = baseDelayMs * 2 ** (attempt - 1);
-      console.warn(
+      logger.warn(
         `Retry ${attempt}/${maxAttempts} after ${delay}ms — ${err.message}`,
       );
       await new Promise((r) => setTimeout(r, delay));

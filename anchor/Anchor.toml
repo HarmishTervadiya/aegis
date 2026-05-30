@@ -8,6 +8,9 @@ skip-lint = false
 [programs.localnet]
 aegis = "BRLNV1VXo3g8n8ZFA55nHD93Di22fDeL8BRU5kPxzinz"
 
+[programs.devnet]
+aegis = "BRLNV1VXo3g8n8ZFA55nHD93Di22fDeL8BRU5kPxzinz"
+
 [registry]
 url = "https://api.apr.dev"
 

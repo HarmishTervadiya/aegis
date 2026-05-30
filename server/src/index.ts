@@ -1,3 +1,4 @@
+import { logger } from "./utils/logger.js";
 import express from "express";
 import cors from "cors";
 import cron from "node-cron";
@@ -57,22 +58,22 @@ cron.schedule("*/30 * * * * *", async () => {
 });
 
 async function start() {
-  console.log("Aegis backend starting...");
+  logger.info("Aegis backend starting...");
 
   // Initial poll on startup so API is immediately populated
   await pollProtocolState();
   await fetchActiveTriggers();
 
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Polling every ${POLL}s`);
-    console.log(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
-    console.log(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
-    console.log(`Active triggers: ${cache.activeTriggers.size}`);
+    logger.info(`Server running on http://localhost:${PORT}`);
+    logger.info(`Polling every ${POLL}s`);
+    logger.info(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
+    logger.info(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
+    logger.info(`Active triggers: ${cache.activeTriggers.size}`);
   });
 }
 
 start().catch((err) => {
-  console.error("Failed to start:", err);
+  logger.error("Failed to start:", err);
   process.exit(1);
 });

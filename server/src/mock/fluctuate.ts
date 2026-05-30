@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import * as dotenv from "dotenv";
@@ -47,7 +48,7 @@ function clamp(val: number, min: number, max: number) {
 
 async function updateMarkets(mfiUtil: number, kamUtil: number, type: string) {
   if (isUpdating) {
-    console.log(`[Fluctuate] Skipping ${type} update - collision prevented`);
+    logger.info(`[Fluctuate] Skipping ${type} update - collision prevented`);
     return;
   }
   isUpdating = true;
@@ -56,7 +57,7 @@ async function updateMarkets(mfiUtil: number, kamUtil: number, type: string) {
     const marginfiLiabilities = Math.floor((ASSETS * mfiUtil) / 100);
     const kaminoLiabilities = Math.floor((ASSETS * kamUtil) / 100);
 
-    console.log(
+    logger.info(
       `[Fluctuate ${type}] MarginFi: ${mfiUtil}%, Kamino: ${kamUtil}%`,
     );
 
@@ -70,9 +71,9 @@ async function updateMarkets(mfiUtil: number, kamUtil: number, type: string) {
       .accounts({ market: kaminoMarket, authority: authority.publicKey })
       .rpc();
 
-    // console.log(`  -> TXs: ${tx1.slice(0,8)}... / ${tx2.slice(0,8)}...`);
+    // logger.info(`  -> TXs: ${tx1.slice(0,8)}... / ${tx2.slice(0,8)}...`);
   } catch (err: any) {
-    console.error(`Error updating markets (${type}):`, err.message);
+    logger.error(`Error updating markets (${type}):`, err.message);
   } finally {
     isUpdating = false;
   }
@@ -108,7 +109,7 @@ async function runMajorFluctuation() {
   await updateMarkets(currentMarginfiUtil, currentKaminoUtil, "MAJOR");
 }
 
-console.log("Starting devnet mock market fluctuation service...");
+logger.info("Starting devnet mock market fluctuation service...");
 
 // Run minor fluctuations every 3 seconds
 setInterval(runMinorFluctuation, 3_000);

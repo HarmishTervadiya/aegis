@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger.js";
 import type { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
@@ -7,7 +8,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction,
 ): void => {
-  console.error("Unhandled error:", err);
+  logger.error("Unhandled error:", err);
 
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
