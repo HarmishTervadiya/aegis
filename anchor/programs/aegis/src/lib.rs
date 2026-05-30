@@ -7,7 +7,7 @@ pub mod state;
 use crate::state::trigger::TriggerMode;
 use instructions::*;
 
-declare_id!("5f3FSmoxZ6fpiQtdBoaPdAyCwUXmqFSRGBpSpRP9C4iU");
+declare_id!("BRLNV1VXo3g8n8ZFA55nHD93Di22fDeL8BRU5kPxzinz");
 
 #[program]
 pub mod aegis {

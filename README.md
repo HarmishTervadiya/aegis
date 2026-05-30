@@ -161,6 +161,53 @@ cd ../frontend && npm install && npm run dev
 
 ---
 
+## Devnet Mock Environment
+
+Since the actual Kamino and MarginFi protocols on Devnet cannot be interacted with via Mainnet CPI instructions (due to differing program layouts and missing liquidity), we provide a Mock Lending program to simulate them.
+
+**1. Build and Deploy Mock Lending**
+
+```bash
+cd aegis/mock-lending
+anchor build
+# Ensure your deployer keypair has devnet SOL
+anchor deploy --provider.cluster devnet
+```
+
+Update `.env` in `aegis/server` and `aegis/frontend` with the generated Mock Program ID:
+
+```env
+MOCK_PROGRAM_ID=YourMockProgramIdHere
+VITE_NETWORK=devnet
+```
+
+**2. Initialize Mock Markets**
+
+```bash
+cd aegis/server
+bun run init-mock-markets
+```
+
+This script mints mock USDC and initializes the mock MarginFi and Kamino markets. It will print the market pubkeys. Update your `.env` files:
+
+```env
+MOCK_MARGINFI_MARKET=PubkeyHere
+MOCK_KAMINO_MARKET=PubkeyHere
+```
+
+**3. Run Fluctuation Cron**
+
+To simulate live market activity (randomly changing utilization) for devnet testing, start the mock fluctuation script:
+
+```bash
+cd aegis/server
+bun run fluctuate
+```
+
+This script will run in the background, updating the mock market assets/liabilities every 30 seconds. When the utilization crosses your trigger threshold, the backend indexer will detect it and fire the atomic routing transaction.
+
+---
+
 ## Technical decisions
 
 **`declare_program!` over external crates.** `marginfi-cpi` and `kamino-lend` crates target Anchor 0.29 and are incompatible with 0.32 due to borsh and bytemuck version conflicts. `declare_program!` generates typed CPI interfaces directly from the fetched on-chain IDLs at compile time. Zero external protocol dependencies.
@@ -187,10 +234,16 @@ cd ../frontend && npm install && npm run dev
 
 ---
 
-## Deployed program
+## Deployed program (Devnet)
 
-| Network | Program ID                     |
-| ------- | ------------------------------ |
-| Devnet  | `YOUR_PROGRAM_ID_AFTER_DEPLOY` |
+| Network | Main Aegis Program ID                          | Mock Lending Program ID                        |
+| ------- | ---------------------------------------------- | ---------------------------------------------- |
+| Devnet  | `BRLNV1VXo3g8n8ZFA55nHD93Di22fDeL8BRU5kPxzinz` | `5oaCiRoijFmywSeZaUDd3v51HM5WqUXHgUahcCsMyUXr` |
 
-Frontend: `YOUR_DEPLOYMENT_URL`
+| Mock Markets        | Address                                        |
+| ------------------- | ---------------------------------------------- |
+| Mock USDC Mint      | `DZ2gahWdP5jQU4eSh9jKRevfRnRdXYw7fp4UJ7sqyLwu` |
+| Mock MarginFi Bank  | `Dwjs445sZZnjRi8ohG5DjWatARn4tjbqsrhmRkC81z1Q` |
+| Mock Kamino Reserve | `32EshMjLsmDWZhdMit2u1f4WLGmD66xtfyeT6PMPF8ny` |
+
+Frontend: `(Pending Vercel/Hosting URL)`

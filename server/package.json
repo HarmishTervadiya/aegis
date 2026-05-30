@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "start": "bun run src/index.ts",
-    "dev": "bun --watch run src/index.ts"
+    "dev": "bun --watch run src/index.ts",
+    "init-mock-markets": "bun run src/mock/init_markets.ts",
+    "fluctuate": "bun run src/mock/fluctuate.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

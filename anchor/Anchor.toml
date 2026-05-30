@@ -6,14 +6,14 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-aegis = "5f3FSmoxZ6fpiQtdBoaPdAyCwUXmqFSRGBpSpRP9C4iU"
+aegis = "BRLNV1VXo3g8n8ZFA55nHD93Di22fDeL8BRU5kPxzinz"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+wallet = "/mnt/c/Users/harmi/deploy-key.json"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""

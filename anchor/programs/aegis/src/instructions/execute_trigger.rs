@@ -11,11 +11,23 @@ use anchor_lang::solana_program::{
 
 // Byte offsets validated via validate_accounts.ts against live mainnet state
 // MarginFi Bank struct: I80F48 total_asset_shares at 182, total_liability_shares at 240
+#[cfg(not(feature = "mock-cpi"))]
 pub const MARGINFI_ASSETS_OFFSET: usize = 182;
+#[cfg(not(feature = "mock-cpi"))]
 pub const MARGINFI_LIABILITIES_OFFSET: usize = 240;
-// Kamino Reserve struct: u64 available_amount at 137, u128 borrowed_amount_sf at 145
+#[cfg(not(feature = "mock-cpi"))]
 pub const KAMINO_AVAILABLE_OFFSET: usize = 137;
+#[cfg(not(feature = "mock-cpi"))]
 pub const KAMINO_BORROWED_OFFSET: usize = 145;
+
+#[cfg(feature = "mock-cpi")]
+pub const MARGINFI_ASSETS_OFFSET: usize = 40;
+#[cfg(feature = "mock-cpi")]
+pub const MARGINFI_LIABILITIES_OFFSET: usize = 48;
+#[cfg(feature = "mock-cpi")]
+pub const KAMINO_AVAILABLE_OFFSET: usize = 40;
+#[cfg(feature = "mock-cpi")]
+pub const KAMINO_BORROWED_OFFSET: usize = 48;
 
 // MarginFi
 const MARGINFI_DEPOSIT_DISCRIMINATOR: [u8; 8] = [171, 94, 235, 103, 82, 64, 212, 140];
@@ -659,6 +671,18 @@ fn kamino_withdraw<'info>(
 /// utilization = total_liabilities / total_assets
 /// Since both values share the same 2^48 scale factor, it cancels in the ratio.
 /// Result: (liabilities_raw * 10000) / assets_raw (capped at 10000 bps).
+#[cfg(feature = "mock-cpi")]
+fn read_marginfi_utilization(account: &AccountInfo) -> Result<u64> {
+    let data = account.data.borrow();
+    require!(data.len() > MARGINFI_LIABILITIES_OFFSET + 8, AegisError::InvalidAccountData);
+    let assets = u64::from_le_bytes(data[MARGINFI_ASSETS_OFFSET..MARGINFI_ASSETS_OFFSET + 8].try_into().map_err(|_| AegisError::DeserializationFailed)?);
+    let liabilities = u64::from_le_bytes(data[MARGINFI_LIABILITIES_OFFSET..MARGINFI_LIABILITIES_OFFSET + 8].try_into().map_err(|_| AegisError::DeserializationFailed)?);
+    if assets == 0 { return Ok(0); }
+    let bps = ((liabilities as u128).checked_mul(10000).ok_or(AegisError::MathOverflow)? / assets as u128) as u64;
+    Ok(bps.min(10000))
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn read_marginfi_utilization(account: &AccountInfo) -> Result<u64> {
     let data = account.data.borrow();
     require!(
@@ -697,6 +721,18 @@ fn read_marginfi_utilization(account: &AccountInfo) -> Result<u64> {
 /// borrowed_amount_sf is a scaled fraction (scale factor 2^60).
 /// We shift available left by 60 bits to match the borrowed scale, then compute the ratio.
 /// Result: (borrowed_sf * 10000) / (available_sf + borrowed_sf) (capped at 10000 bps).
+#[cfg(feature = "mock-cpi")]
+fn read_kamino_utilization(account: &AccountInfo) -> Result<u64> {
+    let data = account.data.borrow();
+    require!(data.len() > KAMINO_BORROWED_OFFSET + 8, AegisError::InvalidAccountData);
+    let assets = u64::from_le_bytes(data[KAMINO_AVAILABLE_OFFSET..KAMINO_AVAILABLE_OFFSET + 8].try_into().map_err(|_| AegisError::DeserializationFailed)?);
+    let liabilities = u64::from_le_bytes(data[KAMINO_BORROWED_OFFSET..KAMINO_BORROWED_OFFSET + 8].try_into().map_err(|_| AegisError::DeserializationFailed)?);
+    if assets == 0 { return Ok(0); }
+    let bps = ((liabilities as u128).checked_mul(10000).ok_or(AegisError::MathOverflow)? / assets as u128) as u64;
+    Ok(bps.min(10000))
+}
+
+#[cfg(not(feature = "mock-cpi"))]
 fn read_kamino_utilization(account: &AccountInfo) -> Result<u64> {
     let data = account.data.borrow();
     require!(

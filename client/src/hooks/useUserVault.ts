@@ -9,27 +9,26 @@ export function useUserVault() {
   const [vault, setVault] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchVault = async () => {
     if (!publicKey || !program) {
       setVault(null);
       return;
     }
+    setLoading(true);
+    try {
+      const pda = deriveVaultPda(publicKey);
+      const data = await (program.account as any).userVault.fetch(pda);
+      setVault({ ...data, pda });
+    } catch {
+      setVault(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetch = async () => {
-      setLoading(true);
-      try {
-        const pda = deriveVaultPda(publicKey);
-        const data = await (program.account as any).userVault.fetch(pda);
-        setVault({ ...data, pda });
-      } catch {
-        setVault(null); // vault does not exist yet
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetch();
+  useEffect(() => {
+    fetchVault();
   }, [publicKey, program]);
 
-  return { vault, loading };
+  return { vault, loading, refreshVault: fetchVault };
 }

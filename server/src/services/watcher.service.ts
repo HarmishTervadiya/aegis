@@ -22,16 +22,26 @@ function read128LE(buffer: Buffer, offset: number): bigint {
   return (upper << 64n) | lower;
 }
 
+const isDevnet = process.env.VITE_NETWORK === "devnet";
+
 /**
  * Reads MarginFi utilization.
  * MUST mirror execute_trigger.rs exactly.
  */
 function readMarginFiUtilization(data: Buffer): number {
-  if (data.length < MARGINFI_LIABILITIES_OFFSET + 16) return 0;
-  const assets = read128LE(data, MARGINFI_ASSETS_OFFSET);
-  const liabilities = read128LE(data, MARGINFI_LIABILITIES_OFFSET);
-  if (assets === 0n) return 0;
-  return Number((liabilities * 10000n) / assets);
+  if (isDevnet) {
+    if (data.length < MARGINFI_LIABILITIES_OFFSET + 8) return 0;
+    const assets = data.readBigUInt64LE(MARGINFI_ASSETS_OFFSET);
+    const liabilities = data.readBigUInt64LE(MARGINFI_LIABILITIES_OFFSET);
+    if (assets === 0n) return 0;
+    return Number((liabilities * 10000n) / assets);
+  } else {
+    if (data.length < MARGINFI_LIABILITIES_OFFSET + 16) return 0;
+    const assets = read128LE(data, MARGINFI_ASSETS_OFFSET);
+    const liabilities = read128LE(data, MARGINFI_LIABILITIES_OFFSET);
+    if (assets === 0n) return 0;
+    return Number((liabilities * 10000n) / assets);
+  }
 }
 
 /**
@@ -39,12 +49,20 @@ function readMarginFiUtilization(data: Buffer): number {
  * MUST mirror execute_trigger.rs exactly.
  */
 function readKaminoUtilization(data: Buffer): number {
-  if (data.length < KAMINO_BORROWED_OFFSET + 8) return 0;
-  const available = data.readBigUInt64LE(KAMINO_AVAILABLE_OFFSET);
-  const borrowed = data.readBigUInt64LE(KAMINO_BORROWED_OFFSET);
-  const total = available + borrowed;
-  if (total === 0n) return 0;
-  return Number((borrowed * 10000n) / total);
+  if (isDevnet) {
+    if (data.length < KAMINO_BORROWED_OFFSET + 8) return 0;
+    const assets = data.readBigUInt64LE(KAMINO_AVAILABLE_OFFSET);
+    const liabilities = data.readBigUInt64LE(KAMINO_BORROWED_OFFSET);
+    if (assets === 0n) return 0;
+    return Number((liabilities * 10000n) / assets);
+  } else {
+    if (data.length < KAMINO_BORROWED_OFFSET + 8) return 0;
+    const available = data.readBigUInt64LE(KAMINO_AVAILABLE_OFFSET);
+    const borrowed = data.readBigUInt64LE(KAMINO_BORROWED_OFFSET);
+    const total = available + borrowed;
+    if (total === 0n) return 0;
+    return Number((borrowed * 10000n) / total);
+  }
 }
 
 export async function pollProtocolState() {

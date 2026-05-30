@@ -123,22 +123,20 @@ export const postMintUsdc = asyncHandler(
       return;
     }
 
-    const mint = process.env.USDC_MINT;
+    const mint = process.env.VITE_USDC_MINT || process.env.USDC_MINT;
     if (!mint) {
-      res
-        .status(500)
-        .json(new ApiResponse(false, null, "USDC_MINT not configured"));
+      res.status(500).json(new ApiResponse(false, null, "USDC_MINT not configured"));
       return;
     }
 
+    const network = process.env.MOCK_MODE === "true" ? "devnet" : "http://127.0.0.1:8899";
+
     exec(
-      `wsl -e bash -lc "spl-token mint ${mint} 1000000 ${address} --url http://127.0.0.1:8899"`,
+      `wsl -e bash -lc "spl-token mint ${mint} 1000000 ${address} --url ${network}"`,
       (err, stdout, stderr) => {
         if (err) {
           console.error(err);
-          res
-            .status(500)
-            .json(new ApiResponse(false, null, "Mint failed: " + stderr));
+          res.status(500).json(new ApiResponse(false, null, "Mint failed: " + stderr));
           return;
         }
         res.json(new ApiResponse(true, null, "Mint successful"));
