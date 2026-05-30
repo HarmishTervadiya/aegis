@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logger } from "../utils/logger.js";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";

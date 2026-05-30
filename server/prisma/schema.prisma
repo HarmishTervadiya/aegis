@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  walletAddress String   @id
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+  
+  triggers      TriggerConfig[]
+  executions    ExecutionRecord[]
+}
+
+model TriggerConfig {
+  triggerPda          String   @id
+  userWallet          String
+  defenseActive       Boolean
+  offenseActive       Boolean
+  defenseThresholdBps Int
+  offenseThresholdBps Int
+  executionCount      Int
+  lastExecuted        Int
+  
+  user User @relation(fields: [userWallet], references: [walletAddress])
+}
+
+model ExecutionRecord {
+  id           String   @id @default(uuid())
+  userWallet   String
+  mode         String
+  marginfiUtil Int
+  kaminoUtil   Int
+  txSignature  String
+  firedAt      DateTime @default(now())
+  
+  user User @relation(fields: [userWallet], references: [walletAddress])
+}

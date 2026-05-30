@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import { exec } from "child_process";
 import { PublicKey } from "@solana/web3.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { serializeTrigger } from "../utils/triggerMode.js";
+import { prisma } from "../db.js";
 import { cache } from "../cache.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import {
@@ -24,9 +24,7 @@ export const getHealth = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getTriggers = asyncHandler(async (req: Request, res: Response) => {
-  const triggers = Array.from(cache.activeTriggers.values()).map(
-    serializeTrigger,
-  );
+  const triggers = await prisma.triggerConfig.findMany();
   res.json(new ApiResponse(true, { triggers, count: triggers.length }));
 });
 
@@ -39,7 +37,10 @@ export const getTriggerByOwner = asyncHandler(
       return;
     }
 
-    const trigger = cache.activeTriggers.get(req.params.owner as string);
+    const trigger = await prisma.triggerConfig.findFirst({
+      where: { userWallet: req.params.owner as string }
+    });
+    
     if (!trigger) {
       res
         .status(404)
@@ -53,16 +54,30 @@ export const getTriggerByOwner = asyncHandler(
       return;
     }
 
-    res.json(new ApiResponse(true, serializeTrigger(trigger)));
+    res.json(new ApiResponse(true, trigger));
   },
 );
 
 export const getExecutions = asyncHandler(
   async (req: Request, res: Response) => {
+    const executions = await prisma.executionRecord.findMany({
+      orderBy: { firedAt: 'desc' },
+      take: 50
+    });
+    
+    const mapped = executions.map(e => ({
+      owner: e.userWallet,
+      mode: e.mode,
+      marginfiUtil: e.marginfiUtil,
+      kaminoUtil: e.kaminoUtil,
+      firedAt: e.firedAt.toISOString(),
+      txSignature: e.txSignature
+    }));
+
     res.json(
       new ApiResponse(true, {
-        executions: cache.recentExecutions,
-        count: cache.recentExecutions.length,
+        executions: mapped,
+        count: mapped.length,
       }),
     );
   },
@@ -86,18 +101,20 @@ export const postCrank = asyncHandler(async (req: Request, res: Response) => {
   await pollProtocolState();
   await fetchActiveTriggers();
 
-  const toFire = evaluateTriggers();
+  const toFire = await evaluateTriggers();
   const results = [];
 
   for (const trigger of toFire) {
-    const result = await fireExecuteTrigger(trigger);
-    results.push({ owner: trigger.owner.toString(), result });
+    const result = await fireExecuteTrigger(trigger as any);
+    results.push({ owner: trigger.trigger.owner.toString(), result });
   }
+
+  const triggerCount = await prisma.triggerConfig.count();
 
   res.json(
     new ApiResponse(true, {
       polledAt: cache.lastPollAt,
-      triggersEvaluated: cache.activeTriggers.size,
+      triggersEvaluated: triggerCount,
       triggered: toFire.length,
       results,
       message: "Manual crank completed",
@@ -106,12 +123,13 @@ export const postCrank = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getStatus = asyncHandler(async (req: Request, res: Response) => {
+  const triggers = await prisma.triggerConfig.count();
   res.json(
     new ApiResponse(true, {
       status: "ok",
       uptime: process.uptime(),
       lastPoll: cache.lastPollAt,
-      triggers: cache.activeTriggers.size,
+      triggers,
     }),
   );
 });
@@ -147,7 +165,7 @@ export const postMintUsdc = asyncHandler(
       `wsl -e bash -lc "spl-token create-account ${mint} --owner ${address} --fee-payer ${keypairPath} --url ${network} || true; spl-token mint ${mint} 1000000 --recipient-owner ${address} --fee-payer ${keypairPath} --mint-authority ${keypairPath} --url ${network}"`,
       (err, stdout, stderr) => {
         if (err) {
-          logger.error("[Mint USDC Error]:", err, stderr);
+          logger.error("[Mint USDC Error]:", err + " " + stderr);
           res
             .status(500)
             .json(new ApiResponse(false, null, "Mint failed: " + stderr));

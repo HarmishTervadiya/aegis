@@ -1,0 +1,15 @@
+# Root gitignore
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+
+# Common Keypair names
+*-keypair.json
+*keypair.json
+deploy-key.json
+id.json
+wallet.json
+secrets.json
+*.pem

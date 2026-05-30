@@ -19,3 +19,5 @@ node_modules/
 *-keypair.json
 *keypair.json
 deploy-key.json
+id.json
+wallet.json

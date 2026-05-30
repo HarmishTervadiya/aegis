@@ -2,6 +2,7 @@ import { logger } from "../utils/logger.js";
 import { PublicKey } from "@solana/web3.js";
 import { connection, program } from "../rpc.js";
 import { cache } from "../cache.js";
+import { prisma } from "../db.js";
 import type { CachedTrigger } from "../cache.js";
 import {
   MARGINFI_BANK,
@@ -106,25 +107,39 @@ export async function fetchActiveTriggers() {
     const allTriggers = await withRetry<any[]>(() =>
       (program.account as any).triggerConfig.all(),
     );
-    const newCache = new Map<string, CachedTrigger>();
 
     for (const t of allTriggers) {
       const acc = t.account;
       if (acc.defenseActive || acc.offenseActive) {
-        newCache.set(acc.owner.toString(), {
-          triggerPda: t.publicKey,
-          owner: acc.owner,
-          defenseActive: acc.defenseActive,
-          offenseActive: acc.offenseActive,
-          defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
-          offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
-          executionCount: acc.executionCount.toNumber(),
-          lastExecuted: acc.lastExecuted.toNumber(),
+        await prisma.user.upsert({
+          where: { walletAddress: acc.owner.toString() },
+          update: {},
+          create: { walletAddress: acc.owner.toString() }
+        });
+        
+        await prisma.triggerConfig.upsert({
+          where: { triggerPda: t.publicKey.toString() },
+          update: {
+            defenseActive: acc.defenseActive,
+            offenseActive: acc.offenseActive,
+            defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
+            offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
+            executionCount: acc.executionCount.toNumber(),
+            lastExecuted: acc.lastExecuted.toNumber(),
+          },
+          create: {
+            triggerPda: t.publicKey.toString(),
+            userWallet: acc.owner.toString(),
+            defenseActive: acc.defenseActive,
+            offenseActive: acc.offenseActive,
+            defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
+            offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
+            executionCount: acc.executionCount.toNumber(),
+            lastExecuted: acc.lastExecuted.toNumber(),
+          }
         });
       }
     }
-
-    cache.activeTriggers = newCache;
   } catch (err: any) {
     logger.error("Watcher: fetch triggers error:", err.message);
   }
@@ -143,7 +158,7 @@ export interface TriggerToFire {
   modeArgs: any; // e.g. { defense: {} } or { offense: {} }
 }
 
-export function evaluateTriggers(): TriggerToFire[] {
+export async function evaluateTriggers(): Promise<TriggerToFire[]> {
   if (
     isCacheStale(cache.marginfi.updatedAt) ||
     isCacheStale(cache.kamino.updatedAt)
@@ -156,10 +171,18 @@ export function evaluateTriggers(): TriggerToFire[] {
   const mfiUtil = cache.marginfi.utilizationBps;
   const kamUtil = cache.kamino.utilizationBps;
 
-  for (const trigger of cache.activeTriggers.values()) {
+  const activeTriggers = await prisma.triggerConfig.findMany({
+    where: {
+      OR: [
+        { defenseActive: true },
+        { offenseActive: true }
+      ]
+    }
+  });
+
+  for (const trigger of activeTriggers) {
     let firedMode: any = null;
 
-    // Defense takes absolute priority
     if (trigger.defenseActive) {
       if (
         mfiUtil > trigger.defenseThresholdBps ||
@@ -169,7 +192,6 @@ export function evaluateTriggers(): TriggerToFire[] {
       }
     }
 
-    // If Defense wasn't triggered, check Offense
     if (!firedMode && trigger.offenseActive) {
       const diff = Math.abs(mfiUtil - kamUtil);
       if (diff > trigger.offenseThresholdBps) {
@@ -178,7 +200,19 @@ export function evaluateTriggers(): TriggerToFire[] {
     }
 
     if (firedMode) {
-      toFire.push({ trigger, modeArgs: firedMode });
+      toFire.push({ 
+        trigger: {
+          triggerPda: new PublicKey(trigger.triggerPda),
+          owner: new PublicKey(trigger.userWallet),
+          defenseActive: trigger.defenseActive,
+          offenseActive: trigger.offenseActive,
+          defenseThresholdBps: trigger.defenseThresholdBps,
+          offenseThresholdBps: trigger.offenseThresholdBps,
+          executionCount: trigger.executionCount,
+          lastExecuted: trigger.lastExecuted,
+        } as any, 
+        modeArgs: firedMode 
+      });
     }
   }
 

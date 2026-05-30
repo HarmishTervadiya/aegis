@@ -2,31 +2,28 @@ import type { Response } from "express";
 import { PublicKey } from "@solana/web3.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
-import { getOrCreateUser, updateUser } from "../utils/users.js";
-import { cache } from "../cache.js";
+import { prisma } from "../db.js";
 import { program } from "../rpc.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
   const wallet = req.wallet!;
-  const user = getOrCreateUser(wallet);
+  
+  const user = await prisma.user.upsert({
+    where: { walletAddress: wallet },
+    update: { updatedAt: new Date() },
+    create: { walletAddress: wallet }
+  });
 
-  updateUser(wallet, { lastSeenAt: new Date().toISOString() });
-  const trigger = cache.activeTriggers.get(wallet);
+  const trigger = await prisma.triggerConfig.findFirst({
+    where: { userWallet: wallet }
+  });
 
   res.json(
     new ApiResponse(true, {
       wallet,
       profile: user,
-      trigger: trigger
-        ? {
-            mode: trigger.mode.defense ? "Defense" : "Offense",
-            isActive: trigger.isActive,
-            defenseThresholdBps: trigger.defenseThresholdBps,
-            offenseThresholdBps: trigger.offenseThresholdBps,
-            executionCount: trigger.executionCount,
-          }
-        : null,
+      trigger
     }),
   );
 });
@@ -34,8 +31,12 @@ export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
 export const updateMe = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const wallet = req.wallet!;
-    const updates = req.body;
-    const user = updateUser(wallet, updates);
+    // Note: The simple schema only has walletAddress and timestamps.
+    const user = await prisma.user.upsert({
+      where: { walletAddress: wallet },
+      update: { updatedAt: new Date() },
+      create: { walletAddress: wallet }
+    });
     res.json(new ApiResponse(true, { wallet, profile: user }));
   },
 );

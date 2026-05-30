@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { program, crankKeypair } from "../rpc.js";
 import { cache } from "../cache.js";
-import type { CachedTrigger } from "../cache.js";
+import { prisma } from "../db.js";
 import { deriveVaultPda } from "../utils/pda.js";
 import { formatMode } from "../utils/triggerMode.js";
 
@@ -26,7 +26,7 @@ export function classifyError(err: any): string | null {
 }
 
 export async function fireExecuteTrigger(task: {
-  trigger: CachedTrigger;
+  trigger: any;
   modeArgs: any;
 }) {
   const { trigger, modeArgs } = task;
@@ -82,19 +82,27 @@ export async function fireExecuteTrigger(task: {
 
     logger.info(`Executor: Fired trigger for ${key.slice(0, 8)}! Tx: ${txSig}`);
 
-    // Add to recent executions cache
-    cache.recentExecutions.unshift({
-      owner: key,
-      mode: formatMode(modeArgs),
-      marginfiUtil: cache.marginfi.utilizationBps,
-      kaminoUtil: cache.kamino.utilizationBps,
-      firedAt: new Date().toISOString(),
-      txSignature: txSig,
-    });
-
-    if (cache.recentExecutions.length > 50) {
-      cache.recentExecutions.pop();
-    }
+    // Update the database
+    const now = Math.floor(Date.now() / 1000);
+    
+    await prisma.$transaction([
+      prisma.executionRecord.create({
+        data: {
+          userWallet: key,
+          mode: formatMode(modeArgs),
+          marginfiUtil: cache.marginfi.utilizationBps,
+          kaminoUtil: cache.kamino.utilizationBps,
+          txSignature: txSig,
+        }
+      }),
+      prisma.triggerConfig.update({
+        where: { triggerPda: trigger.triggerPda.toString() },
+        data: {
+          executionCount: { increment: 1 },
+          lastExecuted: now
+        }
+      })
+    ]);
 
     return { success: true, txSig };
   } catch (err: any) {

@@ -28,8 +28,6 @@ export interface ExecutionRecord {
 export interface CacheStore {
   marginfi: ProtocolHealth;
   kamino: ProtocolHealth;
-  activeTriggers: Map<string, CachedTrigger>;
-  recentExecutions: ExecutionRecord[];
   lastPollAt: string | null;
 }
 
@@ -47,13 +45,6 @@ export const cache: CacheStore = {
     apyBps: 0,
     updatedAt: null,
   },
-
-  // All active triggers fetched from chain
-  // Map of owner pubkey string -> TriggerConfig account data
-  activeTriggers: new Map(),
-
-  // Recent executions fired by the crank this session
-  recentExecutions: [],
 
   // Track last poll time
   lastPollAt: null,

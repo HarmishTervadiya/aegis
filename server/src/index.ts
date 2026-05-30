@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 
 import { validateEnv } from "./utils/validateEnv.js";
 import { cache } from "./cache.js";
+import { prisma } from "./db.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -46,7 +47,7 @@ app.use(errorHandler);
 // Sequential poll -> evaluate -> fire to prevent race conditions
 cron.schedule(`*/${POLL} * * * * *`, async () => {
   await pollProtocolState();
-  const toFire = evaluateTriggers();
+  const toFire = await evaluateTriggers();
   for (const trigger of toFire) {
     await fireExecuteTrigger(trigger);
   }
@@ -69,7 +70,9 @@ async function start() {
     logger.info(`Polling every ${POLL}s`);
     logger.info(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
     logger.info(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
-    logger.info(`Active triggers: ${cache.activeTriggers.size}`);
+    prisma.triggerConfig.count().then(count => {
+      logger.info(`Active triggers: ${count}`);
+    });
   });
 }
 

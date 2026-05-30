@@ -33,3 +33,8 @@ Thumbs.db
 *-keypair.json
 *keypair.json
 deploy-key.json
+id.json
+wallet.json
+
+# Prisma generated client
+src/generated/
