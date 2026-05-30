@@ -1,9 +1,11 @@
 import { logger } from "../utils/logger.js";
 import { PublicKey } from "@solana/web3.js";
+import bs58 from "bs58";
 import { connection, program } from "../rpc.js";
 import { cache } from "../cache.js";
 import { prisma } from "../db.js";
 import type { CachedTrigger } from "../cache.js";
+import { fireExecuteTrigger } from "./executor.service.js";
 import {
   MARGINFI_BANK,
   KAMINO_RESERVE,
@@ -29,6 +31,7 @@ const isDevnet = process.env.VITE_NETWORK === "devnet";
 /**
  * Reads MarginFi utilization.
  * MUST mirror execute_trigger.rs exactly.
+ * Note: Devnet uses a Mock Lending Program with different struct offsets than Mainnet.
  */
 function readMarginFiUtilization(data: Buffer): number {
   if (isDevnet) {
@@ -49,6 +52,7 @@ function readMarginFiUtilization(data: Buffer): number {
 /**
  * Reads Kamino utilization.
  * MUST mirror execute_trigger.rs exactly.
+ * Note: Devnet uses a Mock Lending Program with different struct offsets than Mainnet.
  */
 function readKaminoUtilization(data: Buffer): number {
   if (isDevnet) {
@@ -102,6 +106,49 @@ export async function pollProtocolState() {
   }
 }
 
+async function handleProtocolUpdate() {
+  const toFire = await evaluateTriggers();
+  for (const trigger of toFire) {
+    // fireExecuteTrigger uses inFlight set to prevent duplicates
+    fireExecuteTrigger(trigger).catch((e) => logger.error("Executor fail:", e));
+  }
+}
+
+export async function initProtocolIndexer() {
+  logger.info("Watcher: Initializing WebSocket Indexer for Protocols...");
+
+  // 1. One-time poll to populate cache
+  await pollProtocolState();
+
+  // 2. Subscribe to MarginFi Bank changes
+  connection.onAccountChange(
+    MARGINFI_BANK,
+    async (accountInfo) => {
+      const utilBps = readMarginFiUtilization(Buffer.from(accountInfo.data));
+      cache.marginfi.utilizationBps = utilBps;
+      cache.marginfi.utilizationPct = utilBps / 100;
+      cache.marginfi.updatedAt = new Date().toISOString();
+      cache.lastPollAt = new Date().toISOString();
+      await handleProtocolUpdate();
+    },
+    "confirmed",
+  );
+
+  // 3. Subscribe to Kamino Reserve changes
+  connection.onAccountChange(
+    KAMINO_RESERVE,
+    async (accountInfo) => {
+      const utilBps = readKaminoUtilization(Buffer.from(accountInfo.data));
+      cache.kamino.utilizationBps = utilBps;
+      cache.kamino.utilizationPct = utilBps / 100;
+      cache.kamino.updatedAt = new Date().toISOString();
+      cache.lastPollAt = new Date().toISOString();
+      await handleProtocolUpdate();
+    },
+    "confirmed",
+  );
+}
+
 export async function fetchActiveTriggers() {
   try {
     const allTriggers = await withRetry<any[]>(() =>
@@ -114,9 +161,9 @@ export async function fetchActiveTriggers() {
         await prisma.user.upsert({
           where: { walletAddress: acc.owner.toString() },
           update: {},
-          create: { walletAddress: acc.owner.toString() }
+          create: { walletAddress: acc.owner.toString() },
         });
-        
+
         await prisma.triggerConfig.upsert({
           where: { triggerPda: t.publicKey.toString() },
           update: {
@@ -136,13 +183,103 @@ export async function fetchActiveTriggers() {
             offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
             executionCount: acc.executionCount.toNumber(),
             lastExecuted: acc.lastExecuted.toNumber(),
-          }
+          },
         });
+      } else {
+        // If the polling loop catches an inactive trigger, delete it from DB
+        await prisma.triggerConfig
+          .delete({
+            where: { triggerPda: t.publicKey.toString() },
+          })
+          .catch(() => {});
       }
     }
   } catch (err: any) {
     logger.error("Watcher: fetch triggers error:", err.message);
   }
+}
+
+export async function initTriggerIndexer() {
+  logger.info("Watcher: Initializing WebSocket Indexer for TriggerConfig...");
+
+  // 1. One-time poll to catch up on any missed updates while offline
+  await fetchActiveTriggers();
+
+  // 2. Subscribe to all future changes instantly
+  const discriminator = bs58.encode(
+    Buffer.from([234, 212, 204, 15, 217, 116, 90, 35]),
+  );
+
+  connection.onProgramAccountChange(
+    program.programId,
+    async (keyedAccountInfo) => {
+      const pda = keyedAccountInfo.accountId.toString();
+
+      try {
+        const acc = program.coder.accounts.decode(
+          "triggerConfig",
+          keyedAccountInfo.accountInfo.data,
+        );
+
+        if (acc.defenseActive || acc.offenseActive) {
+          logger.info(`Watcher: Trigger updated on-chain for PDA ${pda}`);
+
+          await prisma.user.upsert({
+            where: { walletAddress: acc.owner.toString() },
+            update: {},
+            create: { walletAddress: acc.owner.toString() },
+          });
+
+          await prisma.triggerConfig.upsert({
+            where: { triggerPda: pda },
+            update: {
+              defenseActive: acc.defenseActive,
+              offenseActive: acc.offenseActive,
+              defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
+              offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
+              executionCount: acc.executionCount.toNumber(),
+              lastExecuted: acc.lastExecuted.toNumber(),
+            },
+            create: {
+              triggerPda: pda,
+              userWallet: acc.owner.toString(),
+              defenseActive: acc.defenseActive,
+              offenseActive: acc.offenseActive,
+              defenseThresholdBps: acc.defenseThresholdBps.toNumber(),
+              offenseThresholdBps: acc.offenseThresholdBps.toNumber(),
+              executionCount: acc.executionCount.toNumber(),
+              lastExecuted: acc.lastExecuted.toNumber(),
+            },
+          });
+        } else {
+          // Trigger explicitly deactivated by user
+          logger.info(
+            `Watcher: Trigger deactivated on-chain. Removing from DB... [PDA: ${pda}]`,
+          );
+          await prisma.triggerConfig
+            .delete({ where: { triggerPda: pda } })
+            .catch(() => {});
+        }
+      } catch (err) {
+        // Failed to decode. This happens if the account was closed/deleted (lamports=0, data length=0)
+        logger.info(
+          `Watcher: Trigger deleted/closed on-chain. Removing from DB... [PDA: ${pda}]`,
+        );
+        await prisma.triggerConfig
+          .delete({ where: { triggerPda: pda } })
+          .catch(() => {});
+      }
+    },
+    "confirmed",
+    [
+      {
+        memcmp: {
+          offset: 0,
+          bytes: discriminator,
+        },
+      },
+    ],
+  );
 }
 
 function isCacheStale(
@@ -173,11 +310,8 @@ export async function evaluateTriggers(): Promise<TriggerToFire[]> {
 
   const activeTriggers = await prisma.triggerConfig.findMany({
     where: {
-      OR: [
-        { defenseActive: true },
-        { offenseActive: true }
-      ]
-    }
+      OR: [{ defenseActive: true }, { offenseActive: true }],
+    },
   });
 
   for (const trigger of activeTriggers) {
@@ -200,7 +334,7 @@ export async function evaluateTriggers(): Promise<TriggerToFire[]> {
     }
 
     if (firedMode) {
-      toFire.push({ 
+      toFire.push({
         trigger: {
           triggerPda: new PublicKey(trigger.triggerPda),
           owner: new PublicKey(trigger.userWallet),
@@ -210,8 +344,8 @@ export async function evaluateTriggers(): Promise<TriggerToFire[]> {
           offenseThresholdBps: trigger.offenseThresholdBps,
           executionCount: trigger.executionCount,
           lastExecuted: trigger.lastExecuted,
-        } as any, 
-        modeArgs: firedMode 
+        } as any,
+        modeArgs: firedMode,
       });
     }
   }

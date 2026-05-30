@@ -224,6 +224,9 @@ This script will run in the background, updating the mock market assets/liabilit
 
 ## Key addresses
 
+> [!NOTE]
+> **Mainnet References Only:** The addresses below are the official Mainnet program IDs for MarginFi and Kamino. However, for testing and review purposes, Aegis is currently deployed entirely on **Devnet** using **Mock Accounts**. The actual Devnet deployed addresses are listed in the section below.
+
 | Account             | Address                                        |
 | ------------------- | ---------------------------------------------- |
 | MarginFi program    | `MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA`  |

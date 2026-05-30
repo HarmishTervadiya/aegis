@@ -185,8 +185,16 @@
       ],
       "args": [
         {
-          "name": "log_index",
+          "name": "execution_count",
           "type": "u64"
+        },
+        {
+          "name": "mode",
+          "type": {
+            "defined": {
+              "name": "TriggerMode"
+            }
+          }
         }
       ]
     },
@@ -301,11 +309,11 @@
           }
         },
         {
-          "name": "defense_threshold_bps",
-          "type": "u64"
+          "name": "is_active",
+          "type": "bool"
         },
         {
-          "name": "offense_threshold_bps",
+          "name": "threshold_bps",
           "type": "u64"
         }
       ]
@@ -487,6 +495,11 @@
     },
     {
       "code": 6010,
+      "name": "CooldownActive",
+      "msg": "Trigger is on cooldown and cannot be executed yet."
+    },
+    {
+      "code": 6011,
       "name": "InvalidThreshold",
       "msg": "Threshold must be between 1 and 10000 basis points"
     }
@@ -519,15 +532,11 @@
             "type": "pubkey"
           },
           {
-            "name": "mode",
-            "type": {
-              "defined": {
-                "name": "TriggerMode"
-              }
-            }
+            "name": "defense_active",
+            "type": "bool"
           },
           {
-            "name": "is_active",
+            "name": "offense_active",
             "type": "bool"
           },
           {

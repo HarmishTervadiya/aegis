@@ -20,7 +20,10 @@ export const IDL = JSON.parse(idlRaw);
 
 export const connection = new Connection(
   process.env.RPC_URL || "http://127.0.0.1:8899",
-  "confirmed",
+  {
+    commitment: "confirmed",
+    wsEndpoint: process.env.WS_URL || undefined,
+  },
 );
 
 // Load crank keypair from file

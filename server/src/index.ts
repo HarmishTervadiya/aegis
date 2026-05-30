@@ -17,6 +17,8 @@ import {
   pollProtocolState,
   fetchActiveTriggers,
   evaluateTriggers,
+  initTriggerIndexer,
+  initProtocolIndexer,
 } from "./services/watcher.service.js";
 import { fireExecuteTrigger } from "./services/executor.service.js";
 
@@ -44,33 +46,19 @@ app.use(errorHandler);
 // Cron jobs (Module 2)
 // -----------------------------------------------------------------------
 
-// Sequential poll -> evaluate -> fire to prevent race conditions
-cron.schedule(`*/${POLL} * * * * *`, async () => {
-  await pollProtocolState();
-  const toFire = await evaluateTriggers();
-  for (const trigger of toFire) {
-    await fireExecuteTrigger(trigger);
-  }
-});
-
-// Refresh the trigger list on a slower cadence
-cron.schedule("*/30 * * * * *", async () => {
-  await fetchActiveTriggers();
-});
-
 async function start() {
   logger.info("Aegis backend starting...");
 
   // Initial poll on startup so API is immediately populated
-  await pollProtocolState();
-  await fetchActiveTriggers();
+  await initProtocolIndexer();
+  await initTriggerIndexer();
 
   app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT}`);
     logger.info(`Polling every ${POLL}s`);
     logger.info(`MarginFi util: ${cache.marginfi.utilizationPct.toFixed(2)}%`);
     logger.info(`Kamino util:   ${cache.kamino.utilizationPct.toFixed(2)}%`);
-    prisma.triggerConfig.count().then(count => {
+    prisma.triggerConfig.count().then((count) => {
       logger.info(`Active triggers: ${count}`);
     });
   });
