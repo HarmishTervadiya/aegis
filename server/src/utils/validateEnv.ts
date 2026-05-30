@@ -2,7 +2,7 @@ import { logger } from "./logger.js";
 const REQUIRED_ENV = [
   "RPC_URL",
   "PROGRAM_ID",
-  "CRANK_KEYPAIR_PATH",
+  "CRANK_PRIVATE_KEY",
   "ADMIN_SECRET",
   "JWT_SECRET",
 ];

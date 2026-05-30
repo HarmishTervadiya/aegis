@@ -26,14 +26,13 @@ export const connection = new Connection(
   },
 );
 
-// Load crank keypair from file
-const keypairPath = process.env.CRANK_KEYPAIR_PATH || "./crank-keypair.json";
+// Load crank keypair from env var
 let crankKeypairData: number[];
 try {
-  crankKeypairData = JSON.parse(fs.readFileSync(keypairPath, "utf8"));
+  crankKeypairData = JSON.parse(process.env.CRANK_PRIVATE_KEY as string);
 } catch (err: any) {
   logger.warn(
-    `Could not load crank keypair at ${keypairPath}. Using a random keypair for now.`,
+    `Could not parse CRANK_PRIVATE_KEY. Using a random keypair for now.`,
   );
   crankKeypairData = Array.from(Keypair.generate().secretKey);
 }

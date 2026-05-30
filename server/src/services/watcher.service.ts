@@ -39,7 +39,7 @@ function read128LE(buffer: Buffer, offset: number): bigint {
   return (upper << 64n) | lower;
 }
 
-const isDevnet = process.env.VITE_NETWORK === "devnet";
+const isDevnet = process.env.RPC_URL?.includes("devnet") || process.env.VITE_NETWORK === "devnet";
 
 /**
  * Reads MarginFi utilization.
@@ -133,7 +133,7 @@ export async function initProtocolIndexer() {
   // 1. One-time poll to populate cache
   await pollProtocolState();
 
-  // 2. Subscribe to MarginFi Bank changes
+  // 2. Subscribe to MarginFi Bank changes via WebSocket (best effort)
   connection.onAccountChange(
     MARGINFI_BANK,
     async (accountInfo) => {
@@ -142,12 +142,13 @@ export async function initProtocolIndexer() {
       cache.marginfi.utilizationPct = utilBps / 100;
       cache.marginfi.updatedAt = new Date().toISOString();
       cache.lastPollAt = new Date().toISOString();
+      logger.info(`[WS] MarginFi updated: ${(utilBps / 100).toFixed(2)}%`);
       await handleProtocolUpdate();
     },
     "confirmed",
   );
 
-  // 3. Subscribe to Kamino Reserve changes
+  // 3. Subscribe to Kamino Reserve changes via WebSocket (best effort)
   connection.onAccountChange(
     KAMINO_RESERVE,
     async (accountInfo) => {
@@ -156,10 +157,21 @@ export async function initProtocolIndexer() {
       cache.kamino.utilizationPct = utilBps / 100;
       cache.kamino.updatedAt = new Date().toISOString();
       cache.lastPollAt = new Date().toISOString();
+      logger.info(`[WS] Kamino updated: ${(utilBps / 100).toFixed(2)}%`);
       await handleProtocolUpdate();
     },
     "confirmed",
   );
+
+  // 4. Fallback polling loop — keeps cache fresh even if WebSocket drops
+  logger.info(`[Watcher] Starting fallback HTTP poll every ${POLL_INTERVAL_SECONDS}s`);
+  setInterval(async () => {
+    await pollProtocolState();
+    logger.info(
+      `[Poll] MarginFi: ${cache.marginfi.utilizationPct.toFixed(2)}% | Kamino: ${cache.kamino.utilizationPct.toFixed(2)}%`,
+    );
+    await handleProtocolUpdate();
+  }, POLL_INTERVAL_SECONDS * 1000);
 }
 
 export async function fetchActiveTriggers() {

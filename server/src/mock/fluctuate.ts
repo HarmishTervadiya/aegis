@@ -16,26 +16,35 @@ const __dirname = path.dirname(__filename);
 const RPC_URL = process.env.RPC_URL || "https://api.devnet.solana.com";
 const connection = new Connection(RPC_URL, "confirmed");
 
-const keypairPath = path.resolve(
-  process.env.HOME || process.env.USERPROFILE || "",
-  "deploy-key.json",
-);
-const keypairData = JSON.parse(fs.readFileSync(keypairPath, "utf-8"));
+let keypairData: number[];
+try {
+  keypairData = JSON.parse(process.env.CRANK_PRIVATE_KEY as string);
+} catch {
+  console.error("Invalid or missing CRANK_PRIVATE_KEY array");
+  process.exit(1);
+}
 const authority = Keypair.fromSecretKey(new Uint8Array(keypairData));
 const wallet = new Wallet(authority);
 const provider = new AnchorProvider(connection, wallet, {
   commitment: "confirmed",
 });
 
-const idlPath = path.resolve(
-  __dirname,
-  "../../../mock-lending/target/idl/mock_lending.json",
-);
+const idlPath = path.resolve(__dirname, "mock_lending.json");
 const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
 const program = new Program(idl, provider);
 
-const marginfiMarket = new PublicKey(process.env.MOCK_MARGINFI_MARKET!);
-const kaminoMarket = new PublicKey(process.env.MOCK_KAMINO_MARKET!);
+const marginfiEnv = process.env.MOCK_MARGINFI_MARKET;
+const kaminoEnv = process.env.MOCK_KAMINO_MARKET;
+
+if (!marginfiEnv || !kaminoEnv) {
+  logger.error(
+    "Missing MOCK_MARGINFI_MARKET or MOCK_KAMINO_MARKET environment variables. The mock market fluctuation service cannot run.",
+  );
+  process.exit(1);
+}
+
+const marginfiMarket = new PublicKey(marginfiEnv);
+const kaminoMarket = new PublicKey(kaminoEnv);
 
 // Global state
 const ASSETS = 10_000_000_000; // 10k USDC
@@ -112,11 +121,11 @@ async function runMajorFluctuation() {
 
 logger.info("Starting devnet mock market fluctuation service...");
 
-// Run minor fluctuations every 3 seconds
-setInterval(runMinorFluctuation, 3_000);
+// Run minor fluctuations every 15 seconds (matching UI polling)
+setInterval(runMinorFluctuation, 15_000);
 
-// Run major fluctuations every 12 seconds
-setInterval(runMajorFluctuation, 12_000);
+// Run major fluctuations every 45 seconds
+setInterval(runMajorFluctuation, 45_000);
 
 // Initial update
 runMinorFluctuation();

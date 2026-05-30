@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-const isDevnet = process.env.VITE_NETWORK === "devnet";
+const isDevnet = process.env.RPC_URL?.includes("devnet") || process.env.VITE_NETWORK === "devnet";
 
 export const MARGINFI_BANK = new PublicKey(
   isDevnet && process.env.MOCK_MARGINFI_MARKET

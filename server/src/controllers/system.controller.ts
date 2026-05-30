@@ -1,6 +1,7 @@
 import { logger } from "../utils/logger.js";
 import type { Request, Response } from "express";
-import { exec } from "child_process";
+import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
+import { connection, crankKeypair } from "../rpc.js";
 import { PublicKey } from "@solana/web3.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { prisma } from "../db.js";
@@ -24,6 +25,7 @@ export const getHealth = asyncHandler(async (req: Request, res: Response) => {
     ? Number(result._sum.lifetimeYield)
     : 0;
 
+  res.setHeader("Cache-Control", "no-store");
   res.json(
     new ApiResponse(true, {
       marginfi: cache.marginfi,
@@ -154,38 +156,41 @@ export const postMintUsdc = asyncHandler(
       return;
     }
 
-    const mint = process.env.VITE_USDC_MINT || process.env.USDC_MINT;
-    if (!mint) {
+    const mintStr = process.env.VITE_USDC_MINT || process.env.USDC_MINT;
+    if (!mintStr) {
       res
         .status(500)
         .json(new ApiResponse(false, null, "USDC_MINT not configured"));
       return;
     }
 
-    const network = process.env.RPC_URL || "http://127.0.0.1:8899";
-    const winPath = process.env.USERPROFILE || "C:\\Users\\harmi";
-    // Convert C:\Users\harmi to /mnt/c/Users/harmi
-    const wslPath =
-      "/mnt/" +
-      winPath.charAt(0).toLowerCase() +
-      winPath.slice(2).replace(/\\/g, "/");
-    const keypairPath = `${wslPath}/deploy-key.json`;
+    try {
+      const mint = new PublicKey(mintStr);
+      const recipient = new PublicKey(address);
 
-    logger.info(`[Mint USDC] Minting ${mint} to ${address} on ${network}`);
+      logger.info(`[Mint USDC] Minting ${mint.toString()} to ${recipient.toString()}`);
 
-    exec(
-      `wsl -e bash -lc "spl-token create-account ${mint} --owner ${address} --fee-payer ${keypairPath} --url ${network} || true; spl-token mint ${mint} 1000000 --recipient-owner ${address} --fee-payer ${keypairPath} --mint-authority ${keypairPath} --url ${network}"`,
-      (err, stdout, stderr) => {
-        if (err) {
-          logger.error("[Mint USDC Error]:", err + " " + stderr);
-          res
-            .status(500)
-            .json(new ApiResponse(false, null, "Mint failed: " + stderr));
-          return;
-        }
-        logger.info(`[Mint USDC Success]: ${stdout}`);
-        res.json(new ApiResponse(true, null, "Mint successful"));
-      },
-    );
+      const tokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        crankKeypair,
+        mint,
+        recipient
+      );
+
+      const signature = await mintTo(
+        connection,
+        crankKeypair,
+        mint,
+        tokenAccount.address,
+        crankKeypair,
+        1000000
+      );
+
+      logger.info(`[Mint USDC Success]: ${signature}`);
+      res.json(new ApiResponse(true, { signature }, "Mint successful"));
+    } catch (err: any) {
+      logger.error("[Mint USDC Error]:", err.message);
+      res.status(500).json(new ApiResponse(false, null, "Mint failed: " + err.message));
+    }
   },
 );
