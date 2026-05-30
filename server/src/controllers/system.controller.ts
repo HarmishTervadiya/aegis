@@ -125,20 +125,34 @@ export const postMintUsdc = asyncHandler(
 
     const mint = process.env.VITE_USDC_MINT || process.env.USDC_MINT;
     if (!mint) {
-      res.status(500).json(new ApiResponse(false, null, "USDC_MINT not configured"));
+      res
+        .status(500)
+        .json(new ApiResponse(false, null, "USDC_MINT not configured"));
       return;
     }
 
-    const network = process.env.MOCK_MODE === "true" ? "devnet" : "http://127.0.0.1:8899";
+    const network = process.env.RPC_URL || "http://127.0.0.1:8899";
+    const winPath = process.env.USERPROFILE || "C:\\Users\\harmi";
+    // Convert C:\Users\harmi to /mnt/c/Users/harmi
+    const wslPath =
+      "/mnt/" +
+      winPath.charAt(0).toLowerCase() +
+      winPath.slice(2).replace(/\\/g, "/");
+    const keypairPath = `${wslPath}/deploy-key.json`;
+
+    console.log(`[Mint USDC] Minting ${mint} to ${address} on ${network}`);
 
     exec(
-      `wsl -e bash -lc "spl-token mint ${mint} 1000000 ${address} --url ${network}"`,
+      `wsl -e bash -lc "spl-token create-account ${mint} --owner ${address} --fee-payer ${keypairPath} --url ${network} || true; spl-token mint ${mint} 1000000 --recipient-owner ${address} --fee-payer ${keypairPath} --mint-authority ${keypairPath} --url ${network}"`,
       (err, stdout, stderr) => {
         if (err) {
-          console.error(err);
-          res.status(500).json(new ApiResponse(false, null, "Mint failed: " + stderr));
+          console.error("[Mint USDC Error]:", err, stderr);
+          res
+            .status(500)
+            .json(new ApiResponse(false, null, "Mint failed: " + stderr));
           return;
         }
+        console.log(`[Mint USDC Success]: ${stdout}`);
         res.json(new ApiResponse(true, null, "Mint successful"));
       },
     );

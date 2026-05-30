@@ -29,8 +29,13 @@ export default function Deposit() {
     if (!publicKey) return;
     try {
       const sig = await connection.requestAirdrop(publicKey, 10 * 1e9);
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight });
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        signature: sig,
+        blockhash,
+        lastValidBlockHeight,
+      });
       toast.success("Airdropped 10 SOL!");
     } catch (err: any) {
       toast.error("Devnet airdrop failed or rate limited: " + err.message);
@@ -41,9 +46,10 @@ export default function Deposit() {
     if (!publicKey) return;
     try {
       toast.loading("Minting 1,000,000 Mock USDC...", { id: "mint-usdc" });
-      const res = await api.post("/api/mint-usdc", { address: publicKey.toBase58() });
-      if (!res.data.success) throw new Error(res.data.message);
-      toast.success("Minted Mock USDC! You can now deposit.", { id: "mint-usdc" });
+      await api.post("/api/mint-usdc", { address: publicKey.toBase58() });
+      toast.success("Minted Mock USDC! You can now deposit.", {
+        id: "mint-usdc",
+      });
     } catch (err: any) {
       toast.error("Mint failed: " + err.message, { id: "mint-usdc" });
     }
@@ -58,9 +64,14 @@ export default function Deposit() {
 
   const handleInitVault = async (): Promise<string> => {
     if (!publicKey || !program) throw new Error("Wallet not connected");
+    console.log("handleInitVault: Deriving PDAs...");
     const vaultPda = deriveVaultPda(publicKey);
     const vaultTokenPda = deriveVaultTokenPda(publicKey);
+    console.log("Vault PDA:", vaultPda.toBase58());
+    console.log("Vault Token PDA:", vaultTokenPda.toBase58());
+    console.log("USDC Mint:", USDC_MINT.toBase58());
 
+    console.log("Sending initializeVault transaction...");
     const tx = await program.methods
       .initializeVault()
       .accounts({
@@ -72,6 +83,7 @@ export default function Deposit() {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
+    console.log("initializeVault transaction signature:", tx);
 
     setTimeout(refreshVault, 1000);
     return tx;
@@ -82,10 +94,16 @@ export default function Deposit() {
     const usdcAmount = Math.floor(parseFloat(amount) * 1_000_000);
     if (isNaN(usdcAmount) || usdcAmount <= 0) throw new Error("Invalid amount");
 
+    console.log(`handleDeposit: Amount=${usdcAmount}`);
     const vaultPda = deriveVaultPda(publicKey);
     const vaultTokenPda = deriveVaultTokenPda(publicKey);
     const userAta = await getAssociatedTokenAddress(USDC_MINT, publicKey);
 
+    console.log("Vault PDA:", vaultPda.toBase58());
+    console.log("Vault Token PDA:", vaultTokenPda.toBase58());
+    console.log("User ATA:", userAta.toBase58());
+
+    console.log("Sending deposit transaction...");
     const tx = await program.methods
       .deposit(new BN(usdcAmount))
       .accounts({
@@ -96,6 +114,7 @@ export default function Deposit() {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
+    console.log("deposit transaction signature:", tx);
 
     setTimeout(refreshVault, 1000);
     return tx;
@@ -103,10 +122,17 @@ export default function Deposit() {
 
   const handleSetTrigger = async (): Promise<string> => {
     if (!publicKey || !program) throw new Error("Wallet not connected");
+    console.log(
+      `handleSetTrigger: mode=${mode}, defThresh=${defThresh}, offThresh=${offThresh}`,
+    );
     const vaultPda = deriveVaultPda(publicKey);
     const triggerPda = deriveTriggerPda(publicKey);
     const modeArg = mode === "Defense" ? { defense: {} } : { offense: {} };
 
+    console.log("Vault PDA:", vaultPda.toBase58());
+    console.log("Trigger PDA:", triggerPda.toBase58());
+
+    console.log("Sending setTrigger transaction...");
     const tx = await program.methods
       .setTrigger(
         modeArg as any,
@@ -120,6 +146,7 @@ export default function Deposit() {
         systemProgram: SystemProgram.programId,
       })
       .rpc();
+    console.log("setTrigger transaction signature:", tx);
 
     return tx;
   };

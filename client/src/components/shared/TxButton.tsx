@@ -37,7 +37,9 @@ export default function TxButton({
         );
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("TxButton Caught Error:", err);
+      console.error("Error Message:", err?.message);
+      console.error("Error Logs:", err?.logs);
       let msg = err?.message || "Transaction failed";
       if (msg.includes("custom program error: 0x")) {
         const code = msg.match(/custom program error: (0x[0-9a-fA-F]+)/)?.[1];
