@@ -65,7 +65,7 @@ export default function Dashboard() {
       </div>
 
       {/* Yield & Status Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div data-tour="vault-metrics" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* Current Protocol card */}
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-xs text-secondary">Current Protocol</p>
@@ -163,27 +163,31 @@ export default function Dashboard() {
           <SkeletonCard />
         </div>
       ) : data ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ProtocolCard
-            name="MarginFi"
-            utilizationBps={data.marginfi.utilizationBps}
-            protocol="marginfi"
-            thresholdBps={
-              trigger?.defenseActive && currentProtocol === "marginFi"
-                ? defenseThreshold
-                : undefined
-            }
-          />
-          <ProtocolCard
-            name="Kamino"
-            utilizationBps={data.kamino.utilizationBps}
-            protocol="kamino"
-            thresholdBps={
-              trigger?.defenseActive && currentProtocol === "kamino"
-                ? defenseThreshold
-                : undefined
-            }
-          />
+        <div data-tour="protocol-cards" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div data-tour="marginfi-card">
+            <ProtocolCard
+              name="MarginFi"
+              utilizationBps={data.marginfi.utilizationBps}
+              protocol="marginfi"
+              thresholdBps={
+                trigger?.defenseActive && currentProtocol === "marginFi"
+                  ? defenseThreshold
+                  : undefined
+              }
+            />
+          </div>
+          <div data-tour="kamino-card">
+            <ProtocolCard
+              name="Kamino"
+              utilizationBps={data.kamino.utilizationBps}
+              protocol="kamino"
+              thresholdBps={
+                trigger?.defenseActive && currentProtocol === "kamino"
+                  ? defenseThreshold
+                  : undefined
+              }
+            />
+          </div>
         </div>
       ) : (
         <p className="text-secondary text-sm">Could not load protocol data.</p>

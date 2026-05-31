@@ -265,6 +265,7 @@ export default function Deposit() {
                 Airdrop 10 SOL
               </button>
               <button
+                data-tour="mint-usdc"
                 onClick={handleMintUsdc}
                 className="flex-1 px-4 py-2 rounded-lg bg-border text-primary text-sm hover:bg-border/80 transition-colors"
               >
@@ -282,7 +283,7 @@ export default function Deposit() {
               <p className="text-primary font-medium mb-4">
                 Initialize your Aegis vault
               </p>
-              <TxButton onClick={handleInitVault}>Create Vault</TxButton>
+              <TxButton data-tour="init-vault" onClick={handleInitVault}>Create Vault</TxButton>
             </div>
           )}
 
@@ -299,7 +300,7 @@ export default function Deposit() {
               {vaultExists ? "Deposit USDC" : "Fund your automation vault"}
             </p>
             <div className="flex gap-2">
-              <div className="relative flex-1">
+              <div data-tour="deposit-amount" className="relative flex-1">
                 <input
                   type="number"
                   placeholder="0.00"
@@ -333,7 +334,7 @@ export default function Deposit() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Defense Trigger Box */}
-              <div className="bg-bg rounded-lg p-4 border border-border">
+              <div data-tour="defense-trigger" className="bg-bg rounded-lg p-4 border border-border">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold text-sm">Defense Mode</h3>
                   <div
@@ -387,7 +388,7 @@ export default function Deposit() {
               </div>
 
               {/* Offense Trigger Box */}
-              <div className="bg-bg rounded-lg p-4 border border-border">
+              <div data-tour="offense-trigger" className="bg-bg rounded-lg p-4 border border-border">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold text-sm">Offense Mode</h3>
                   <div

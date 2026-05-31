@@ -13,7 +13,7 @@ export default function Activity() {
         </p>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl p-6">
+      <div data-tour="activity-feed" className="bg-surface border border-border rounded-xl p-6">
         <ActivityFeed />
       </div>
     </div>

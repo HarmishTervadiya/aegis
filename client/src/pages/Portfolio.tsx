@@ -202,7 +202,9 @@ export default function Portfolio() {
       {/* Left Column */}
       <div className="flex flex-col">
         {/* Yield History Graph (placed at top as requested) */}
-        <YieldGraph />
+        <div data-tour="yield-graph">
+          <YieldGraph />
+        </div>
       </div>
 
       {/* Right Column */}
@@ -246,7 +248,7 @@ export default function Portfolio() {
         </div>
 
         {/* Position summary */}
-        <div className="bg-surface border border-border rounded-xl p-5">
+        <div data-tour="position-card" className="bg-surface border border-border rounded-xl p-5">
           <h2 className="text-sm font-medium text-secondary mb-4">
             Your Position
           </h2>
@@ -331,7 +333,7 @@ export default function Portfolio() {
 
         {/* Withdraw */}
         {vault && !triggersActive && (
-          <div className="bg-surface border border-border rounded-xl p-5">
+          <div data-tour="withdraw-btn" className="bg-surface border border-border rounded-xl p-5">
             <h2 className="text-sm font-medium text-secondary mb-4">
               Withdraw
             </h2>
