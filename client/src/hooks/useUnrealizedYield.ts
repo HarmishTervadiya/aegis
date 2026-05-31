@@ -18,7 +18,7 @@ export function useUnrealizedYield(dbVault: any): number {
       !dbVault ||
       !dbVault.depositedAt ||
       !dbVault.apyAtEntry ||
-      dbVault.currentProtocol === "idle" ||
+      dbVault.currentProtocol.toLowerCase() === "idle" ||
       !dbVault.usdcDeposited
     ) {
       setUnrealized(0);

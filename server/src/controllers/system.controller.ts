@@ -73,12 +73,27 @@ export const getTriggerByOwner = asyncHandler(
 
 export const getExecutions = asyncHandler(
   async (req: Request, res: Response) => {
+    const { cursor, limit, wallet } = req.query;
+    
+    // Default limit to 50, max 100
+    const take = limit ? Math.min(parseInt(limit as string), 100) : 50;
+    const where = wallet ? { userWallet: wallet as string } : {};
+
     const executions = await prisma.executionRecord.findMany({
+      where,
       orderBy: { firedAt: "desc" },
-      take: 50,
+      take: take + 1, // Fetch one extra to determine nextCursor
+      ...(cursor ? { cursor: { id: cursor as string } } : {}),
     });
 
+    let nextCursor: string | null = null;
+    if (executions.length > take) {
+      const nextItem = executions.pop();
+      nextCursor = nextItem!.id;
+    }
+
     const mapped = executions.map((e) => ({
+      id: e.id,
       owner: e.userWallet,
       mode: e.mode,
       marginfiUtil: e.marginfiUtil,
@@ -92,7 +107,8 @@ export const getExecutions = asyncHandler(
       new ApiResponse(true, {
         executions: mapped,
         count: mapped.length,
-      }),
+        nextCursor,
+      })
     );
   },
 );

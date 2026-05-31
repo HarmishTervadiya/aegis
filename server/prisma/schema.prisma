@@ -9,6 +9,7 @@ datasource db {
 }
 
 model User {
+  id            String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   walletAddress String   @id
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now())
@@ -19,6 +20,7 @@ model User {
 }
 
 model TriggerConfig {
+  id                  String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   triggerPda          String   @id
   userWallet          String
   defenseActive       Boolean
@@ -45,6 +47,7 @@ model ExecutionRecord {
 }
 
 model UserVault {
+  id              String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vaultPda        String   @id
   userWallet      String   @unique
   currentProtocol String

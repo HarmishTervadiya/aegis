@@ -3,6 +3,7 @@ import api from "../lib/api";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 interface ExecutionRecord {
+  id: string;
   owner: string;
   mode: string;
   marginfiUtil: number;
@@ -14,6 +15,7 @@ interface ExecutionRecord {
 
 interface ActivityFeedProps {
   limit?: number;
+  wallet?: string;
 }
 
 /** Same interest-rate curve used in ProtocolCard — no redeployment needed */
@@ -23,32 +25,52 @@ function calcApy(utilBps: number): number {
   return 5 + (pct - 80) * (15 / 20);
 }
 
-export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
+export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit, wallet }) => {
   const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { publicKey } = useWallet();
 
-  const fetchExecutions = async () => {
+  const fetchExecutions = async (isLoadMore = false) => {
     try {
-      setLoading(true);
-      const res = await api.get("/api/executions");
-      let data: ExecutionRecord[] = res.data.executions || [];
-      if (limit) {
-        data = data.slice(0, limit);
+      if (isLoadMore) setLoadingMore(true);
+      else setLoading(true);
+
+      const params = new URLSearchParams();
+      if (limit) params.append("limit", limit.toString());
+      if (wallet) params.append("wallet", wallet);
+      if (isLoadMore && nextCursor) params.append("cursor", nextCursor);
+
+      const res = await api.get(`/api/executions?${params.toString()}`);
+      
+      const newExecutions: ExecutionRecord[] = res.data.executions || [];
+      
+      if (isLoadMore) {
+        setExecutions((prev) => [...prev, ...newExecutions]);
+      } else {
+        setExecutions(newExecutions);
       }
-      setExecutions(data);
+      setNextCursor(res.data.nextCursor || null);
     } catch (err) {
       console.error("Failed to fetch executions", err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
     fetchExecutions();
-    const id = setInterval(fetchExecutions, 5000);
+    // Only poll automatically if we are not paginating deep into history
+    const id = setInterval(() => {
+      if (!nextCursor || executions.length <= (limit || 50)) {
+        // Simple polling for fresh data (resets to top)
+        fetchExecutions();
+      }
+    }, 15000); // Polling every 15s instead of 5s to save DB load
     return () => clearInterval(id);
-  }, [limit]);
+  }, [limit, wallet]);
 
   if (loading && executions.length === 0) {
     return (
@@ -114,7 +136,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
         </span>
       </div>
 
-      {executions.map((exec, idx) => {
+      {executions.map((exec) => {
         const isMine = publicKey && exec.owner === publicKey.toBase58();
         const isOffense = exec.mode.toLowerCase() === "offense";
         // Avg APY snapshot at execution time (both protocols)
@@ -124,7 +146,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
 
         return (
           <div
-            key={idx}
+            key={exec.id}
             className={`rounded-xl border px-4 py-3 transition-colors
               ${
                 isMine
@@ -241,6 +263,21 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit }) => {
           </div>
         );
       })}
+
+      {nextCursor && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => fetchExecutions(true)}
+            disabled={loadingMore}
+            className="px-6 py-2 rounded-lg text-sm font-medium bg-surface border border-border text-primary hover:bg-border/50 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            ) : null}
+            {loadingMore ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

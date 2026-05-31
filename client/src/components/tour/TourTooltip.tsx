@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTourStore, TOTAL_STEPS } from "../../stores/tourStore";
@@ -7,48 +7,72 @@ import { TOUR_STEPS } from "./tourSteps";
 interface TooltipPos {
   top: number;
   left: number;
+  transform: string;
   arrowSide: "top" | "bottom" | "left" | "right";
 }
 
 function getPosition(el: Element, position: string): TooltipPos {
   const rect = el.getBoundingClientRect();
   const GAP = 16;
-  const TOOLTIP_W = 320;
-  const TOOLTIP_H = 180;
+  const tooltipW = Math.min(320, window.innerWidth - 16);
+  
+  // Horizontally center with the element, but keep inside viewport boundaries
+  const centerLeft = Math.min(
+    Math.max(rect.left + rect.width / 2 - tooltipW / 2, 8),
+    window.innerWidth - tooltipW - 8
+  );
+  const tooltipH = 200; // Estimated height
 
-  switch (position) {
+  // If the target element is massive (e.g. a long list), pin the tooltip in the viewport so it doesn't get lost
+  if (rect.height > Math.max(window.innerHeight, 800)) {
+    return {
+      top: window.scrollY + 120, // 120px down from the top of the screen
+      left: centerLeft,
+      transform: "none",
+      arrowSide: "top",
+    };
+  }
+
+  let finalPosition = position;
+
+  // Flip vertical positions if they overflow the viewport
+  if (position === "top" && rect.top - GAP - tooltipH < 0) {
+    finalPosition = "bottom";
+  } else if (position === "bottom" && rect.bottom + GAP + tooltipH > window.innerHeight) {
+    finalPosition = "top";
+  }
+
+  switch (finalPosition) {
     case "bottom":
       return {
         top: rect.bottom + GAP + window.scrollY,
-        left: Math.min(
-          Math.max(rect.left + rect.width / 2 - TOOLTIP_W / 2, 8),
-          window.innerWidth - TOOLTIP_W - 8,
-        ),
+        left: centerLeft,
+        transform: "none",
         arrowSide: "top",
       };
     case "top":
       return {
-        top: rect.top - TOOLTIP_H - GAP + window.scrollY,
-        left: Math.min(
-          Math.max(rect.left + rect.width / 2 - TOOLTIP_W / 2, 8),
-          window.innerWidth - TOOLTIP_W - 8,
-        ),
+        top: rect.top - GAP + window.scrollY,
+        left: centerLeft,
+        transform: "translateY(-100%)",
         arrowSide: "bottom",
       };
     case "right":
       return {
-        top: rect.top + rect.height / 2 - TOOLTIP_H / 2 + window.scrollY,
+        top: rect.top + rect.height / 2 + window.scrollY,
         left: rect.right + GAP,
+        transform: "translateY(-50%)",
         arrowSide: "left",
       };
     case "left":
       return {
-        top: rect.top + rect.height / 2 - TOOLTIP_H / 2 + window.scrollY,
-        left: rect.left - TOOLTIP_W - GAP,
+        top: rect.top + rect.height / 2 + window.scrollY,
+        left: rect.left - GAP,
+        transform: "translate(-100%, -50%)",
         arrowSide: "right",
       };
     default:
-      return { top: rect.bottom + GAP + window.scrollY, left: rect.left, arrowSide: "top" };
+      return { top: rect.bottom + GAP + window.scrollY, left: centerLeft, transform: "none", arrowSide: "top" };
   }
 }
 
@@ -56,18 +80,29 @@ export default function TourTooltip() {
   const { active, step, next, skip } = useTourStore();
   const [pos, setPos] = useState<TooltipPos | null>(null);
   const [targetEl, setTargetEl] = useState<Element | null>(null);
+  const initStepRef = useRef<number>(-1);
   const navigate = useNavigate();
   const location = useLocation();
 
   const currentStep = TOUR_STEPS[step];
+  console.log("[TourTooltip] Render. Active:", active, "Step:", step, "Pos:", pos);
 
   const reposition = useCallback(() => {
     if (!currentStep) return;
     const el = document.querySelector(`[data-tour="${currentStep.id}"]`);
+    console.log("[TourTooltip] Repositioning step", currentStep.id, "Found element?", !!el);
     setTargetEl(el);
     if (el) {
       setPos(getPosition(el, currentStep.position));
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      
+      // Only scroll and focus once when the step first appears
+      if (initStepRef.current !== step) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof (el as HTMLElement).focus === "function") {
+          (el as HTMLElement).focus({ preventScroll: true });
+        }
+        initStepRef.current = step;
+      }
     } else {
       setPos(null);
     }
@@ -81,22 +116,45 @@ export default function TourTooltip() {
     }
   }, [active, step, currentStep?.page]);
 
-  // Reposition after navigation settles
+  // Reposition after navigation settles and keep retrying if not found
   useEffect(() => {
-    if (!active) return;
+    if (!active || !currentStep) return;
+    
+    // Initial attempt
     const t = setTimeout(reposition, 350);
-    return () => clearTimeout(t);
-  }, [active, step, location.pathname, reposition]);
+    
+    let attempts = 0;
+    // Keep trying every 500ms
+    const interval = setInterval(() => {
+      const el = document.querySelector(`[data-tour="${currentStep.id}"]`);
+      if (el) {
+        reposition();
+      } else {
+        attempts++;
+        if (attempts > 1) {
+          console.log(`[TourTooltip] Step ${currentStep.id} not found after 0.5s. Auto-skipping.`);
+          next();
+        }
+      }
+    }, 500);
+    
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+    };
+  }, [active, step, location.pathname, reposition, currentStep, next]);
 
-  // Reposition on resize
+  // Reposition on resize and scroll for perfectly smooth tracking
   useEffect(() => {
     if (!active) return;
     const observer = new ResizeObserver(reposition);
     observer.observe(document.body);
     window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, { passive: true });
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition);
     };
   }, [active, reposition]);
 
@@ -116,7 +174,10 @@ export default function TourTooltip() {
     }
   }, [targetEl]);
 
-  if (!active || !currentStep || !pos) return null;
+  if (!active || !currentStep || !pos) {
+    console.log("[TourTooltip] Returning null because:", { active, hasCurrentStep: !!currentStep, hasPos: !!pos });
+    return null;
+  }
 
   const arrowStyles: Record<string, string> = {
     top: "bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-border",
@@ -132,8 +193,14 @@ export default function TourTooltip() {
 
       {/* Tooltip card */}
       <div
-        className="fixed z-50 w-80 bg-surface border border-purple/40 rounded-xl shadow-2xl p-5"
-        style={{ top: pos.top, left: pos.left }}
+        className="absolute z-[9999] bg-surface border border-purple/40 rounded-xl shadow-2xl p-5 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+        style={{ 
+          top: pos.top, 
+          left: pos.left, 
+          transform: pos.transform,
+          width: "320px",
+          maxWidth: "calc(100vw - 16px)"
+        }}
       >
         {/* Arrow */}
         <div
@@ -166,7 +233,7 @@ export default function TourTooltip() {
         <div className="flex items-center justify-between">
           <button
             onClick={skip}
-            className="text-xs text-muted hover:text-secondary transition-colors"
+            className="text-xs text-secondary hover:text-primary transition-colors"
           >
             Skip tour
           </button>
@@ -174,7 +241,7 @@ export default function TourTooltip() {
             onClick={next}
             className="px-4 py-1.5 bg-purple text-bg text-sm font-medium rounded-lg hover:bg-purple/80 transition-colors"
           >
-            {step === TOTAL_STEPS - 1 ? "Finish ✓" : "Next →"}
+            {step === TOTAL_STEPS - 1 ? "Finish" : "Next"}
           </button>
         </div>
       </div>

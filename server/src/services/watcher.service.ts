@@ -120,10 +120,14 @@ export async function pollProtocolState() {
 }
 
 async function handleProtocolUpdate() {
-  const toFire = await evaluateTriggers();
-  for (const trigger of toFire) {
-    // fireExecuteTrigger uses inFlight set to prevent duplicates
-    fireExecuteTrigger(trigger).catch((e) => logger.error("Executor fail:", e));
+  try {
+    const toFire = await evaluateTriggers();
+    for (const trigger of toFire) {
+      // fireExecuteTrigger uses inFlight set to prevent duplicates
+      fireExecuteTrigger(trigger).catch((e) => logger.error("Executor fail:", e));
+    }
+  } catch (e) {
+    logger.error("Watcher: trigger evaluation failed (likely DB timeout):", e);
   }
 }
 

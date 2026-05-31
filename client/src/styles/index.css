@@ -15,6 +15,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1e2a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a3a;
+}
+
 /* Wallet adapter modal override to match dark theme */
 .wallet-adapter-modal-wrapper {
   background: #111118 !important;

@@ -48,8 +48,12 @@ export function useUserVault() {
       return;
     }
     fetchVault();
-    // Re-fetch when auth state changes so dbVault populates after login
-  }, [publicKey, program, authed]);
+
+    // Poll every 10 seconds to catch autonomous crank executions from the backend
+    const interval = setInterval(fetchVault, 10000);
+
+    return () => clearInterval(interval);
+  }, [publicKey, program, authed, fetchVault]);
 
   return { vault, dbVault, loading, refreshVault: fetchVault };
 }

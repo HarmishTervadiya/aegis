@@ -39,19 +39,7 @@ const allowedOrigins = [
   "http://localhost:5173",
 ];
 
-// ── Public health route — registered BEFORE cors middleware ──
-// This allows UptimeRobot, Render port scanner, and any origin to ping it.
-app.get("/api/health", (_req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  res.json({
-    success: true,
-    data: {
-      marginfi: cache.marginfi,
-      kamino: cache.kamino,
-      lastPollAt: cache.lastPollAt,
-    },
-  });
-});
+
 
 app.use(
   cors({
@@ -65,6 +53,20 @@ app.use(
     credentials: true, // allow cookies cross-origin
   }),
 );
+
+// ── Public health route (Protocol Data) ──
+app.get("/api/health", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    success: true,
+    data: {
+      marginfi: cache.marginfi,
+      kamino: cache.kamino,
+      lastPollAt: cache.lastPollAt,
+    },
+  });
+});
+
 app.use(cookieParser());
 app.use(express.json());
 

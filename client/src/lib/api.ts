@@ -2,8 +2,19 @@ import axios from "axios";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
-// Cookies are sent automatically via withCredentials — no manual token handling needed
+import { useAuthStore } from "../stores/authStore";
+
+// Cookies are sent automatically via withCredentials — no manual token handling needed (for supported browsers)
 const api = axios.create({ baseURL: BASE_URL, withCredentials: true });
+
+// Attach Bearer token from localStorage for browsers blocking 3rd-party cookies
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // Unwrap the { success, data, errors } envelope
 api.interceptors.response.use(

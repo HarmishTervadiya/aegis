@@ -98,7 +98,8 @@ export default function Deposit() {
   const handleAirdrop = async () => {
     if (!publicKey) return;
     try {
-      const sig = await connection.requestAirdrop(publicKey, 10 * 1e9);
+      toast.loading("Airdropping 1 SOL for gas...", { id: "gas" });
+      const sig = await connection.requestAirdrop(publicKey, 1 * 1e9);
       const { blockhash, lastValidBlockHeight } =
         await connection.getLatestBlockhash();
       await connection.confirmTransaction({
@@ -262,7 +263,7 @@ export default function Deposit() {
                 onClick={handleAirdrop}
                 className="flex-1 px-4 py-2 rounded-lg bg-border text-primary text-sm hover:bg-border/80 transition-colors"
               >
-                Airdrop 10 SOL
+                Airdrop 1 SOL
               </button>
               <button
                 data-tour="mint-usdc"
@@ -495,7 +496,7 @@ export default function Deposit() {
             Recent Crank Executions
           </h2>
         </div>
-        <ActivityFeed limit={5} />
+        <ActivityFeed limit={5} wallet={publicKey?.toBase58()} />
       </div>
     </div>
   );

@@ -3,19 +3,16 @@ import { useTourStore } from "../../stores/tourStore";
 
 const SLIDES = [
   {
-    icon: "⚡",
     title: "Welcome to Aegis",
     subtitle: "Autonomous DeFi Yield Optimization",
-    body: "Aegis monitors MarginFi and Kamino USDC lending pools in real time and automatically moves your funds to capture the best yield — all on-chain, all non-custodial.",
+    body: "Aegis monitors MarginFi and Kamino USDC lending pools in real time and automatically moves your funds to capture the best yield, all on-chain, all non-custodial.",
   },
   {
-    icon: "🔄",
     title: "How Automated Yield Works",
     subtitle: "Set it. Forget it. Earn.",
-    body: "You deposit USDC and configure two triggers: a Defense threshold (to protect from liquidity risk) and an Offense threshold (to chase higher yield). Aegis's crank fires automatically when either condition is met — no manual action needed.",
+    body: "You deposit USDC and configure two triggers: a Defense threshold (to protect from liquidity risk) and an Offense threshold (to chase higher yield). Aegis's crank fires automatically when either condition is met, no manual action needed.",
   },
   {
-    icon: "🚀",
     title: "Ready to Get Started?",
     subtitle: "Your first deposit takes under a minute",
     body: "Head to the Deposit page to mint test USDC, initialize your vault, and activate your first automated trigger. Let's take a quick tour of the platform first!",
@@ -23,7 +20,7 @@ const SLIDES = [
 ];
 
 export default function WelcomeModal() {
-  const { hasSeenTour, skip, start } = useTourStore();
+  const { hasSeenTour, skip, start, active } = useTourStore();
   const [slide, setSlide] = useState(0);
   const [visible, setVisible] = useState(false);
 
@@ -35,13 +32,14 @@ export default function WelcomeModal() {
     }
   }, [hasSeenTour]);
 
-  if (hasSeenTour || !visible) return null;
+  if (hasSeenTour || active || !visible) return null;
 
   const isLast = slide === SLIDES.length - 1;
   const current = SLIDES[slide];
 
   const handleNext = () => {
     if (isLast) {
+      console.log("[WelcomeModal] isLast is true, calling start()");
       setVisible(false);
       setTimeout(() => start(), 300);
     } else {
@@ -68,12 +66,6 @@ export default function WelcomeModal() {
         <div className="h-1 bg-gradient-to-r from-purple via-marginfi to-kamino" />
 
         <div className="p-8">
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-purple/10 border border-purple/20 flex items-center justify-center text-4xl">
-              {current.icon}
-            </div>
-          </div>
 
           {/* Text */}
           <div className="text-center mb-8">
@@ -110,7 +102,7 @@ export default function WelcomeModal() {
               onClick={handleNext}
               className="px-6 py-2.5 bg-purple text-bg text-sm font-medium rounded-lg hover:bg-purple/80 transition-colors"
             >
-              {isLast ? "Start Tour →" : "Next →"}
+              {isLast ? "Start Tour" : "Next"}
             </button>
           </div>
         </div>

@@ -114,7 +114,7 @@ export const verifySignature = asyncHandler(
         path: "/",
       });
 
-      res.json(new ApiResponse(true, { wallet, expiresIn: JWT_EXPIRY }));
+      res.json(new ApiResponse(true, { wallet, token, expiresIn: JWT_EXPIRY }));
     } catch (err: any) {
       res
         .status(401)
